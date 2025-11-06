@@ -1,0 +1,30 @@
+# Firebase functions .gitignore
+
+# Node dependencies
+node_modules/
+
+# Firebase config
+.runtimeconfig.json
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Firebase cache
+.firebase/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

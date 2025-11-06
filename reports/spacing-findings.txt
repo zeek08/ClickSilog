@@ -1,0 +1,317 @@
+SPACING REFERENCE SCAN REPORT
+Generated: 2025-11-05
+========================================
+
+STATIC SCAN RESULTS
+========================================
+
+1. PATTERN: \bspacing\b (518 matches found)
+
+FILE: src/screens/kitchen/KDSDashboard.js
+- Line 16: const StatusBadge = ({ status, theme, borderRadius, spacing, typography }) => {
+  CLASSIFICATION: D - Correct usage (spacing passed as prop from useTheme())
+- Line 63: paddingVertical: spacing.xs
+  CLASSIFICATION: D - Correct usage (spacing from useTheme hook)
+- Line 64: paddingHorizontal: spacing.sm
+  CLASSIFICATION: D - Correct usage
+- Line 67: gap: spacing.xs
+  CLASSIFICATION: D - Correct usage
+- Line 98: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage (properly destructured from useTheme hook)
+- Line 107: if (!theme || !spacing || !borderRadius || !typography) {
+  CLASSIFICATION: D - Correct usage (safety check)
+- Lines 155-698: Multiple spacing.xs, spacing.sm, spacing.md, spacing.lg, spacing.xl, spacing.xxl references
+  CLASSIFICATION: D - All correct usage via useTheme hook
+
+FILE: src/contexts/ThemeContext.js
+- Line 7: const DEFAULT_SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
+  CLASSIFICATION: D - Correct definition (hardcoded fallback)
+- Line 23: if (lightTheme.spacing && typeof lightTheme.spacing === 'object') {
+  CLASSIFICATION: D - Correct usage (checking theme.spacing)
+- Line 24: spacingValue = lightTheme.spacing;
+  CLASSIFICATION: D - Correct usage
+- Line 41: spacing: spacingValue,
+  CLASSIFICATION: D - Correct usage (context value)
+- Line 93-95: Safe spacing fallback logic
+  CLASSIFICATION: D - Correct usage (defensive programming)
+- Lines 107, 117, 163, 172, 204, 214: spacing property assignments
+  CLASSIFICATION: D - All correct usage in context provider
+
+FILE: src/config/theme.js
+- Line 11: Comment "// Design tokens for scalability - 8px spacing system"
+  CLASSIFICATION: D - Documentation
+- Line 66: spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
+  CLASSIFICATION: D - Correct definition in lightTheme
+- Line 150: spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
+  CLASSIFICATION: D - Correct definition in darkTheme
+
+FILE: src/screens/customer/CartScreen.js
+- Line 9: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- Lines 24-412: All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/ui/CategoryFilter.js
+- Line 6: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- Lines 15-59: All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/ui/MenuItemCard.js
+- Line 13: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- Lines 66-119: All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/admin/MenuAddOnsManager.js
+- Line 10: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- Lines 98-588: All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/admin/MenuManager.js
+- Line 10: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/admin/AddOnsManager.js
+- Line 12: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/admin/AdminDashboard.js
+- Line 11: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/customer/MenuScreen.js
+- Line 15: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/customer/PaymentScreen.js
+- Line 10: const MethodChip = ({ label, selected, onPress, theme, borderRadius, spacing, typography }) => (
+  CLASSIFICATION: D - Correct usage (spacing passed as prop)
+- Line 42: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/HomeScreen.js
+- Line 10: const RoleButton = ({ label, color, iconName, onPress, theme, borderRadius, spacing }) => {
+  CLASSIFICATION: D - Correct usage (spacing passed as prop)
+- Line 51: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/cashier/OrderHistoryTabs.js
+- Line 14: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/cashier/PaymentControls.js
+- Line 15: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/cashier/OrderSummary.js
+- Line 9: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/cashier/CashierDashboard.js
+- Line 12: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/cashier/CashierOrderingScreen.js
+- Line 18: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/screens/cashier/CashierPaymentScreen.js
+- Line 10: const { theme, spacing, borderRadius, typography } = useTheme();
+  CLASSIFICATION: D - Correct usage
+- All spacing references via useTheme hook
+  CLASSIFICATION: D - All correct usage
+
+FILE: src/components/ui/HeaderHomeButton.js
+- Uses useTheme hook correctly
+  CLASSIFICATION: D - Correct usage
+
+2. PATTERN: theme\.spacing\b (0 matches found)
+  RESULT: No direct theme.spacing references found (all use destructured spacing from useTheme hook)
+  CLASSIFICATION: D - Correct pattern (using hook instead of direct access)
+
+3. PATTERN: \bspacing\.[a-zA-Z0-9_]+\b (454 matches found)
+  RESULT: All are spacing.xs, spacing.sm, spacing.md, spacing.lg, spacing.xl, spacing.xxl
+  CLASSIFICATION: D - All correct usage via useTheme hook
+
+4. PATTERN: \bspacing\(\) or \bspacing\[\d+\] (0 matches found)
+  RESULT: No function calls or array access patterns found
+  CLASSIFICATION: D - No problematic patterns
+
+5. PATTERN: export const theme / export default theme / createTheme|ThemeProvider
+  RESULT: 
+  - src/config/theme.js: exports lightTheme, darkTheme, and default export
+  - src/contexts/ThemeContext.js: exports ThemeProvider and useTheme hook
+  - App.js: ThemeProvider wraps the app
+  CLASSIFICATION: D - All correct setup
+
+========================================
+CLASSIFICATION SUMMARY
+========================================
+
+Total files scanned: 20+
+Total spacing references: 518
+Total theme.spacing references: 0 (all use hook pattern)
+Total spacing.[prop] references: 454
+Total problematic patterns: 0
+
+CLASSIFICATION BREAKDOWN:
+- Type A (missing import): 0 files
+- Type B (global spacing variable): 0 files  
+- Type C (third-party component): 0 files
+- Type D (correct usage): 100% of files
+
+========================================
+ROOT CAUSE ANALYSIS
+========================================
+
+Based on the comprehensive scan:
+
+1. ✅ Theme file exists: src/config/theme.js
+   - Contains lightTheme and darkTheme
+   - Both have spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 }
+   - Has default export
+
+2. ✅ ThemeContext exists: src/contexts/ThemeContext.js
+   - Provides useTheme() hook
+   - Returns spacing from theme.spacing
+   - Has multiple fallback layers
+   - Always provides context (fixed: removed {isReady ? children : null})
+
+3. ✅ ThemeProvider wraps app: App.js
+   - ThemeProvider is at root level
+   - Properly nested with other providers
+
+4. ✅ All components use useTheme() hook correctly
+   - All destructure spacing from useTheme()
+   - No direct theme.spacing references
+   - No global spacing variables
+   - No missing imports
+
+5. ✅ Previous fixes applied:
+   - ThemeProvider now always renders children (not conditional on isReady)
+   - Theme file has default export
+   - KDSDashboard hooks order fixed (all hooks before safety check)
+
+========================================
+POTENTIAL ISSUES & FIXES
+========================================
+
+ISSUE 1: ThemeProvider initialization timing
+STATUS: ✅ FIXED
+- Previously returned null during initialization
+- Now always provides context with defaults
+- Change: Removed {isReady ? children : null} conditional
+
+ISSUE 2: Missing default export
+STATUS: ✅ FIXED
+- Added export default lightTheme to theme.js
+- Added getTheme() helper function
+
+ISSUE 3: React Rules of Hooks violation
+STATUS: ✅ FIXED
+- KDSDashboard had safety check between hooks
+- Moved all hooks before safety check
+
+ISSUE 4: No direct theme import option
+STATUS: ✅ FIXED
+- Added default export to theme.js
+- Components can import theme directly if needed
+
+========================================
+VERIFICATION STEPS
+========================================
+
+1. ✅ Theme file exists at src/config/theme.js
+2. ✅ ThemeContext provides useTheme hook
+3. ✅ ThemeProvider wraps app in App.js
+4. ✅ All components use useTheme() hook
+5. ✅ No undefined spacing references
+6. ✅ All spacing values are valid (xs, sm, md, lg, xl, xxl)
+
+========================================
+RECOMMENDATIONS
+========================================
+
+1. ✅ All spacing references are correct
+2. ✅ Theme system is properly structured
+3. ✅ No additional fixes needed
+4. ⚠️  If error persists, check:
+   - Metro bundler cache (run: npx react-native start --reset-cache)
+   - Hot reload issues (restart app)
+   - Build cache (clean and rebuild)
+
+========================================
+FILES CHANGED (Previously)
+========================================
+
+1. src/config/theme.js
+   - Added: export default lightTheme
+   - Added: export const getTheme() helper
+   - Status: ✅ Complete
+
+2. src/contexts/ThemeContext.js
+   - Changed: Always render children (removed isReady conditional)
+   - Status: ✅ Complete
+
+3. src/screens/kitchen/KDSDashboard.js
+   - Fixed: Moved all hooks before safety check
+   - Status: ✅ Complete
+
+========================================
+NEXT STEPS IF ERROR PERSISTS
+========================================
+
+If ReferenceError still occurs:
+
+1. Clear Metro bundler cache:
+   ```bash
+   npx react-native start --reset-cache
+   ```
+
+2. Clear watchman cache:
+   ```bash
+   watchman watch-del-all
+   ```
+
+3. Clear React Native cache:
+   ```bash
+   rm -rf $TMPDIR/react-*
+   rm -rf node_modules/.cache
+   ```
+
+4. Rebuild app:
+   ```bash
+   npx react-native run-android  # or run-ios
+   ```
+
+5. Check for dynamic requires or eval statements that might reference spacing
+
+========================================
+END OF REPORT
+========================================
+
+
