@@ -1,5 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -44,6 +46,7 @@ const MethodChip = ({ label, selected, onPress, theme, borderRadius, spacing, ty
 );
 
 const PaymentScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { user } = useContext(AuthContext);
   const { items, subtotal, total, discount, discountCode, discountAmount, applyDiscountCode, removeDiscount, clearCart } = useCart();
@@ -90,49 +93,64 @@ const PaymentScreen = ({ navigation }) => {
     try {
       setLoading(true);
       
-      // Step 1: Create order first to get orderId
+      // Step 1: Create order first to get orderId with pending_payment status
       const orderData = {
         items,
         subtotal,
         total,
         paymentMethod: 'gcash',
-        status: 'pending',
+        status: 'pending_payment', // Critical: order is waiting for payment
         discountCode: discountCode || null,
         discountAmount: discountAmount || 0,
         discountName: discount?.name || null,
         tableNumber: user?.tableNumber || null,
         userId: user?.uid || null,
         source: 'customer', // Mark order as created by customer
+        paymentStatus: 'pending', // Payment is pending
       };
       
       // Place order first to get orderId
       const orderResult = await orderService.placeOrder(orderData);
       const orderId = orderResult?.id || orderResult?.orderId || `order_${Date.now()}`;
       
-      // Step 2: Process payment via Cloud Function (secure)
+      // Step 2: Create payment source via Cloud Function (QR PH API)
+      // This will return either QR code data or checkout URL depending on PayMongo response
       const paymentResult = await paymentService.processPayment({
         amount: total,
         currency: 'PHP',
         description: `ClickSiLog Order #${orderId}`,
         orderId,
-        paymentMethod: 'gcash'
+        paymentMethod: 'gcash',
+        tableNumber: user?.tableNumber || null
       });
       
       if (!paymentResult.success) {
         throw new Error(paymentResult.error || 'Payment processing failed');
       }
       
-      // Step 3: Update order with payment info
-      if (paymentResult.paymentIntentId) {
+      // Step 3: Update order with source info (already done by Cloud Function, but ensure consistency)
+      if (paymentResult.sourceId) {
         await orderService.updateOrder(orderId, {
-          paymentIntentId: paymentResult.paymentIntentId,
-          paymentStatus: paymentResult.status || 'pending'
+          sourceId: paymentResult.sourceId,
+          paymentStatus: 'pending',
+          status: 'pending_payment'
         });
       }
       
-      clearCart();
-      // Navigation handled by CustomerOrderNotification component
-      navigation.popToTop();
+      // Step 4: Navigate to GCash payment screen with QR code or checkout URL
+      // The screen will automatically show QR code if available, or checkout button if that's what PayMongo returned
+      navigation.navigate('GCashPayment', {
+        orderId,
+        sourceId: paymentResult.sourceId,
+        checkoutSessionId: paymentResult.checkoutSessionId,
+        checkoutUrl: paymentResult.checkoutUrl,
+        qrData: paymentResult.qrData,
+        expiresAt: paymentResult.expiresAt,
+        amount: total,
+        paymentType: paymentResult.qrData ? 'qrph' : 'checkout' // Auto-detect based on what PayMongo returned
+      });
+      
+      // Don't clear cart yet - wait for payment confirmation
     } catch (e) {
       console.error('Payment error:', e.message);
       alertService.error('Payment Error', e.message || 'Failed to process payment. Please try again.');
@@ -178,16 +196,20 @@ const PaymentScreen = ({ navigation }) => {
       }}
       onRetry={processGCashPayment}
     >
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.select({ ios: 80, android: 100 })}
+    >
       {/* Modern Header with Progress Indicator */}
       <View style={[
         styles.header,
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
-          paddingBottom: spacing.md,
+          paddingBottom: spacing.sm,
         }
       ]}>
         <View style={[styles.headerTop, { marginBottom: spacing.md }]}>
@@ -214,6 +236,8 @@ const PaymentScreen = ({ navigation }) => {
                 library="ionicons"
                 size={22}
                 color={theme.colors.success}
+                responsive={true}
+                hitArea={false}
               />
           </View>
           
@@ -245,6 +269,8 @@ const PaymentScreen = ({ navigation }) => {
                 library="ionicons"
                 size={22}
                 color={theme.colors.onPrimary}
+                responsive={true}
+                hitArea={false}
               />
             </View>
           </View>
@@ -253,28 +279,60 @@ const PaymentScreen = ({ navigation }) => {
             onPress={() => navigation.goBack()}
             style={[
               {
-                backgroundColor: theme.colors.error + '20',
-                borderColor: theme.colors.error,
-                borderRadius: borderRadius.round,
                 width: 44,
                 height: 44,
-                borderWidth: 1.5,
                 justifyContent: 'center',
                 alignItems: 'center',
+                backgroundColor: 'transparent',
               }
             ]}
           >
-            <Icon
-              name="close"
-              library="ionicons"
-              size={22}
-              color={theme.colors.error}
-            />
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.error + '20',
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.error,
+                  padding: spacing.sm,
+                  borderRadius: 999, // Perfect circle
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="close"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </AnimatedButton>
         </View>
       </View>
 
-      <ScrollView style={[styles.scrollView, { backgroundColor: theme.colors.background }]} contentContainerStyle={[styles.contentContainer, { padding: spacing.xl, paddingBottom: spacing.xl }]} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView
+        enableOnAndroid={true}
+        extraScrollHeight={80}
+        keyboardShouldPersistTaps="handled"
+        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
+        contentContainerStyle={[styles.contentContainer, { padding: spacing.xl, paddingBottom: spacing.xl }]}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={[
         styles.content, 
         { 
@@ -343,7 +401,7 @@ const PaymentScreen = ({ navigation }) => {
             backgroundColor: theme.colors.surfaceVariant,
             borderRadius: borderRadius.lg,
             padding: spacing.md,
-            marginBottom: spacing.lg,
+            marginBottom: spacing.md,
           }
         ]}>
           {discount ? (
@@ -489,7 +547,6 @@ const PaymentScreen = ({ navigation }) => {
               </View>
             ))}
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Subtotal</Text>
             <Text style={[styles.summaryValue, { color: theme.colors.text }]}>₱{subtotal.toFixed(2)}</Text>
@@ -569,7 +626,7 @@ const PaymentScreen = ({ navigation }) => {
           )}
         </AnimatedButton>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
 
     {/* Cash Payment Confirmation Modal */}
     <CashPaymentConfirmationModal
@@ -588,7 +645,7 @@ const PaymentScreen = ({ navigation }) => {
       }}
       total={total}
     />
-    </View>
+    </KeyboardAvoidingView>
     </PaymentErrorBoundary>
   );
 };

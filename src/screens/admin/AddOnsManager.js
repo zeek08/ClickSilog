@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, ScrollView, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import { alertService } from '../../services/alertService';
@@ -10,6 +11,7 @@ import ThemeToggle from '../../components/ui/ThemeToggle';
 const categories = ['rice', 'drink', 'extra'];
 
 const AddOnsManager = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [addOns, setAddOns] = useState([]);
   const [filter, setFilter] = useState('rice');
@@ -128,7 +130,7 @@ const AddOnsManager = ({ navigation }) => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -209,15 +211,19 @@ const AddOnsManager = ({ navigation }) => {
                   {
                     backgroundColor: filter === c ? theme.colors.primary : theme.colors.surfaceVariant,
                     borderColor: filter === c ? theme.colors.primary : theme.colors.border,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.md,
-                    borderWidth: 1.5,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: spacing.xs + 2,
+                    paddingHorizontal: spacing.sm,
+                    borderWidth: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: spacing.xs,
+                    gap: spacing.xs / 2,
                     shadowColor: filter === c ? theme.colors.primary : undefined,
+                    shadowOffset: filter === c ? { width: 0, height: 1 } : undefined,
+                    shadowOpacity: filter === c ? 0.08 : undefined,
+                    shadowRadius: filter === c ? 2 : undefined,
+                    elevation: filter === c ? 1 : 0,
                   }
                 ]}
                 onPress={() => { setFilter(c); setForm((f) => ({ ...f, category: c })); }}
@@ -225,14 +231,17 @@ const AddOnsManager = ({ navigation }) => {
                 <Icon
                   name={categoryIcon.name}
                   library={categoryIcon.library}
-                  size={18}
+                  size={14}
                   color={filter === c ? theme.colors.onPrimary : theme.colors.textSecondary}
+                  responsive={false}
+                  hitArea={false}
                 />
                 <Text style={[
                   styles.tabText,
                   {
                     color: filter === c ? theme.colors.onPrimary : theme.colors.textSecondary,
-                    ...typography.captionBold,
+                    fontSize: 13,
+                    fontWeight: filter === c ? '600' : '500',
                   }
                 ]}>
                   {c.charAt(0).toUpperCase() + c.slice(1)}
@@ -248,15 +257,20 @@ const AddOnsManager = ({ navigation }) => {
           styles.addButton,
           {
             backgroundColor: theme.colors.primary,
-            borderRadius: borderRadius.lg,
-            paddingVertical: spacing.md,
+            borderRadius: borderRadius.md,
+            paddingVertical: spacing.sm + spacing.xs,
+            paddingHorizontal: spacing.md,
             margin: spacing.md,
             marginBottom: spacing.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: spacing.sm,
+            gap: spacing.xs,
             shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 1,
           }
         ]}
         onPress={() => openAdd()}
@@ -264,14 +278,17 @@ const AddOnsManager = ({ navigation }) => {
         <Icon
           name="add"
           library="ionicons"
-          size={24}
+          size={18}
           color={theme.colors.onPrimary}
+          responsive={false}
+          hitArea={false}
         />
         <Text style={[
           styles.addButtonText,
           {
             color: theme.colors.onPrimary,
-            ...typography.bodyBold,
+            fontSize: 14,
+            fontWeight: '600',
           }
         ]}>
           Add New Add-on
@@ -317,26 +334,31 @@ const AddOnsManager = ({ navigation }) => {
                   {
                     backgroundColor: item.available ? theme.colors.successLight : theme.colors.errorLight,
                     borderColor: item.available ? theme.colors.success : theme.colors.error,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.xs,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 1.5,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: 3,
+                    paddingHorizontal: spacing.xs + 2,
+                    borderWidth: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: spacing.xs,
+                    justifyContent: 'center',
+                    gap: spacing.xs / 2,
                   }
                 ]}>
                   <Icon
                     name={item.available ? 'checkmark-circle' : 'close-circle'}
                     library="ionicons"
-                    size={14}
+                    size={11}
                     color={item.available ? theme.colors.success : theme.colors.error}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: spacing.xs / 2 }}
                   />
                   <Text style={[
                     styles.statusText,
                     {
                       color: item.available ? theme.colors.success : theme.colors.error,
-                      ...typography.captionBold,
+                      fontSize: 11,
+                      fontWeight: '600',
                     }
                   ]}>
                     {item.available ? 'Active' : 'Hidden'}
@@ -347,27 +369,31 @@ const AddOnsManager = ({ navigation }) => {
                 styles.metaContainer,
                 {
                   backgroundColor: theme.colors.surfaceVariant,
-                  borderRadius: borderRadius.md,
-                  padding: spacing.sm,
-                  marginTop: spacing.sm,
-                  marginBottom: spacing.md,
+                  borderRadius: borderRadius.sm,
+                  paddingVertical: spacing.xs + 2,
+                  paddingHorizontal: spacing.sm,
+                  marginTop: spacing.xs,
+                  marginBottom: spacing.sm,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: spacing.sm,
+                  gap: spacing.xs,
                 }
               ]}>
                 <Icon
                   name="cash"
                   library="ionicons"
-                  size={16}
+                  size={14}
                   color={theme.colors.primary}
+                  responsive={false}
+                  hitArea={false}
                 />
                 <Text style={[
                   styles.meta,
                   {
                     color: theme.colors.textSecondary,
-                    ...typography.caption,
-                    marginRight: spacing.sm,
+                    fontSize: 12,
+                    fontWeight: '500',
+                    marginRight: spacing.xs,
                   }
                 ]}>
                   ₱{Number(item.price || 0).toFixed(2)}
@@ -375,14 +401,17 @@ const AddOnsManager = ({ navigation }) => {
                 <Icon
                   name={categoryIcon.name}
                   library={categoryIcon.library}
-                  size={14}
+                  size={12}
                   color={theme.colors.textSecondary}
+                  responsive={false}
+                  hitArea={false}
                 />
                 <Text style={[
                   styles.meta,
                   {
                     color: theme.colors.textSecondary,
-                    ...typography.caption,
+                    fontSize: 12,
+                    fontWeight: '500',
                     textTransform: 'capitalize',
                   }
                 ]}>
@@ -405,11 +434,15 @@ const AddOnsManager = ({ navigation }) => {
                     styles.btn,
                     {
                       backgroundColor: theme.colors.primary,
-                      borderRadius: borderRadius.md,
+                      borderRadius: borderRadius.sm,
                       paddingVertical: spacing.sm,
                       paddingHorizontal: spacing.md,
                       flex: 1,
                       shadowColor: theme.colors.primary,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
                     }
                   ]}
                   onPress={() => openEdit(item)}
@@ -419,13 +452,16 @@ const AddOnsManager = ({ navigation }) => {
                     library="ionicons"
                     size={16}
                     color={theme.colors.onPrimary}
-                    style={{ marginRight: spacing.xs }}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.btnText,
                     {
                       color: theme.colors.onPrimary,
-                      ...typography.captionBold,
+                      fontSize: 13,
+                      fontWeight: '600',
                     }
                   ]}>
                     Edit
@@ -435,12 +471,13 @@ const AddOnsManager = ({ navigation }) => {
                   style={[
                     styles.btn,
                     {
-                      backgroundColor: theme.colors.warning,
-                      borderRadius: borderRadius.md,
+                      backgroundColor: item.available ? theme.colors.surfaceVariant : theme.colors.success,
+                      borderColor: item.available ? theme.colors.border : theme.colors.success,
+                      borderRadius: borderRadius.sm,
                       paddingVertical: spacing.sm,
                       paddingHorizontal: spacing.md,
                       flex: 1,
-                      shadowColor: theme.colors.warning,
+                      borderWidth: 1,
                     }
                   ]}
                   onPress={() => toggle(item)}
@@ -449,14 +486,17 @@ const AddOnsManager = ({ navigation }) => {
                     name={item.available ? 'eye-off' : 'eye'}
                     library="ionicons"
                     size={16}
-                    color="#FFFFFF"
-                    style={{ marginRight: spacing.xs }}
+                    color={item.available ? theme.colors.textSecondary : theme.colors.onPrimary}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.btnText,
                     {
-                      color: '#FFFFFF',
-                      ...typography.captionBold,
+                      color: item.available ? theme.colors.textSecondary : theme.colors.onPrimary,
+                      fontSize: 13,
+                      fontWeight: '600',
                     }
                   ]}>
                     {item.available ? 'Disable' : 'Enable'}
@@ -467,11 +507,15 @@ const AddOnsManager = ({ navigation }) => {
                     styles.btn,
                     {
                       backgroundColor: theme.colors.error,
-                      borderRadius: borderRadius.md,
+                      borderRadius: borderRadius.sm,
                       paddingVertical: spacing.sm,
                       paddingHorizontal: spacing.md,
                       flex: 1,
                       shadowColor: theme.colors.error,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
                     }
                   ]}
                   onPress={() => remove(item)}
@@ -481,20 +525,20 @@ const AddOnsManager = ({ navigation }) => {
                     library="ionicons"
                     size={16}
                     color="#FFFFFF"
-                    style={{ marginRight: spacing.xs }}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                     <Text 
                       style={[
                         styles.btnText,
                         {
                           color: '#FFFFFF',
-                          ...typography.captionBold,
+                          fontSize: 13,
+                          fontWeight: '600',
                         }
                       ]}
                       numberOfLines={1}
-                      adjustsFontSizeToFit={true}
-                      minimumFontScale={0.7}
-                      allowFontScaling={true}
                     >
                       Delete
                     </Text>
@@ -551,24 +595,27 @@ const AddOnsManager = ({ navigation }) => {
             {
               backgroundColor: theme.colors.surface,
               borderBottomColor: theme.colors.border,
-              paddingTop: spacing.xl + spacing.sm,
+              paddingTop: insets.top + spacing.md,
               paddingHorizontal: spacing.md,
-              paddingBottom: spacing.md,
+              paddingBottom: spacing.sm,
             }
           ]}>
             <View style={styles.modalTitleRow}>
               <Icon
                 name={editingItem ? 'create' : 'add-circle'}
                 library="ionicons"
-                size={24}
+                size={20}
                 color={theme.colors.primary}
-                style={{ marginRight: spacing.sm }}
+                responsive={false}
+                hitArea={false}
+                style={{ marginRight: spacing.xs }}
               />
               <Text style={[
                 styles.modalTitle,
                 {
                   color: theme.colors.text,
-                  ...typography.h2,
+                  fontSize: 18,
+                  fontWeight: '600',
                 }
               ]}>
                 {editingItem ? 'Edit Add-on' : 'Add New Add-on'}
@@ -581,16 +628,18 @@ const AddOnsManager = ({ navigation }) => {
                 {
                   backgroundColor: theme.colors.error,
                   borderRadius: borderRadius.round,
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                 }
               ]}
             >
               <Icon
                 name="close"
                 library="ionicons"
-                size={22}
+                size={18}
                 color={theme.colors.onPrimary}
+                responsive={false}
+                hitArea={false}
               />
             </AnimatedButton>
           </View>
@@ -598,16 +647,17 @@ const AddOnsManager = ({ navigation }) => {
             styles.modalContent,
             {
               backgroundColor: theme.colors.background,
-              padding: spacing.lg,
+              padding: spacing.md,
             }
           ]}>
             <Text style={[
               styles.label,
               {
                 color: theme.colors.text,
-                ...typography.bodyBold,
-                marginBottom: spacing.sm,
-                marginTop: spacing.md,
+                fontSize: 13,
+                fontWeight: '600',
+                marginBottom: spacing.xs,
+                marginTop: spacing.sm,
               }
             ]}>
               Category
@@ -617,9 +667,9 @@ const AddOnsManager = ({ navigation }) => {
               {
                 flexDirection: 'row',
                 flexWrap: 'wrap',
-                gap: spacing.sm,
-                marginTop: spacing.sm,
-                marginBottom: spacing.md,
+                gap: spacing.xs,
+                marginTop: spacing.xs,
+                marginBottom: spacing.sm,
               }
             ]}>
               {categories.map((c) => {
@@ -632,13 +682,13 @@ const AddOnsManager = ({ navigation }) => {
                       {
                         backgroundColor: form.category === c ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
                         borderColor: form.category === c ? theme.colors.primary : theme.colors.border,
-                        borderRadius: borderRadius.md,
-                        paddingVertical: spacing.sm,
-                        paddingHorizontal: spacing.md,
-                        borderWidth: 2,
+                        borderRadius: borderRadius.sm,
+                        paddingVertical: spacing.xs + 2,
+                        paddingHorizontal: spacing.sm,
+                        borderWidth: 1.5,
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: spacing.xs,
+                        gap: spacing.xs / 2,
                       }
                     ]}
                     onPress={() => setForm((f) => ({ ...f, category: c }))}
@@ -646,14 +696,17 @@ const AddOnsManager = ({ navigation }) => {
                     <Icon
                       name={categoryIcon.name}
                       library={categoryIcon.library}
-                      size={16}
+                      size={12}
                       color={form.category === c ? theme.colors.primary : theme.colors.textSecondary}
+                      responsive={false}
+                      hitArea={false}
                     />
                     <Text style={[
                       styles.categoryChipText,
                       {
                         color: form.category === c ? theme.colors.primary : theme.colors.textSecondary,
-                        ...typography.captionBold,
+                        fontSize: 12,
+                        fontWeight: '600',
                       }
                     ]}>
                       {c.charAt(0).toUpperCase() + c.slice(1)}
@@ -666,9 +719,10 @@ const AddOnsManager = ({ navigation }) => {
               styles.label,
               {
                 color: theme.colors.text,
-                ...typography.bodyBold,
-                marginBottom: spacing.sm,
-                marginTop: spacing.md,
+                fontSize: 13,
+                fontWeight: '600',
+                marginBottom: spacing.xs,
+                marginTop: spacing.sm,
               }
             ]}>
               Name
@@ -682,10 +736,12 @@ const AddOnsManager = ({ navigation }) => {
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,
                   color: theme.colors.text,
-                  borderRadius: borderRadius.md,
-                  padding: spacing.md,
-                  borderWidth: 2,
-                  ...typography.body,
+                  borderRadius: borderRadius.sm,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderWidth: 1.5,
+                  fontSize: 14,
+                  fontWeight: '400',
                 }
               ]}
               placeholder="Add-on name"
@@ -695,9 +751,10 @@ const AddOnsManager = ({ navigation }) => {
               styles.label,
               {
                 color: theme.colors.text,
-                ...typography.bodyBold,
-                marginBottom: spacing.sm,
-                marginTop: spacing.md,
+                fontSize: 13,
+                fontWeight: '600',
+                marginBottom: spacing.xs,
+                marginTop: spacing.sm,
               }
             ]}>
               Price
@@ -711,10 +768,12 @@ const AddOnsManager = ({ navigation }) => {
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,
                   color: theme.colors.text,
-                  borderRadius: borderRadius.md,
-                  padding: spacing.md,
-                  borderWidth: 2,
-                  ...typography.body,
+                  borderRadius: borderRadius.sm,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderWidth: 1.5,
+                  fontSize: 14,
+                  fontWeight: '400',
                 }
               ]}
               placeholder="0"
@@ -726,14 +785,18 @@ const AddOnsManager = ({ navigation }) => {
                 styles.saveBtn,
                 {
                   backgroundColor: theme.colors.primary,
-                  borderRadius: borderRadius.lg,
-                  paddingVertical: spacing.lg,
-                  marginTop: spacing.xl,
+                  borderRadius: borderRadius.md,
+                  paddingVertical: spacing.sm + spacing.xs,
+                  marginTop: spacing.lg,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: spacing.sm,
+                  gap: spacing.xs,
                   shadowColor: theme.colors.primary,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 2,
+                  elevation: 1,
                 }
               ]}
               onPress={save}
@@ -741,14 +804,17 @@ const AddOnsManager = ({ navigation }) => {
               <Icon
                 name="save"
                 library="ionicons"
-                size={22}
+                size={16}
                 color={theme.colors.onPrimary}
+                responsive={false}
+                hitArea={false}
               />
               <Text style={[
                 styles.saveBtnText,
                 {
                   color: theme.colors.onPrimary,
-                  ...typography.bodyBold,
+                  fontSize: 14,
+                  fontWeight: '600',
                 }
               ]}>
                 Save

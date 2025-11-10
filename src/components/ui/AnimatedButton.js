@@ -37,7 +37,7 @@ const AnimatedButton = ({
       stiffness: 400,
       mass: 0.8
     });
-    opacity.value = withTiming(0.85, { duration: 150 });
+    opacity.value = withTiming(0.85, { duration: 100 });
   };
 
   const handlePressOut = () => {
@@ -46,20 +46,27 @@ const AnimatedButton = ({
       stiffness: 400,
       mass: 0.8
     });
-    opacity.value = withTiming(1, { duration: 150 });
+    opacity.value = withTiming(1, { duration: 100 });
+  };
+  
+  const handlePress = (event) => {
+    // Call onPress immediately without delay
+    if (onPress && !disabled) {
+      onPress(event);
+    }
   };
 
   return (
     <AnimatedTouchable
       style={[style, animatedStyle]}
-      onPress={onPress}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
       activeOpacity={activeOpacity}
       {...props}
     >
-      <View style={styles.buttonContent}>
+      <View style={styles.buttonContent} pointerEvents="box-none">
         {children}
       </View>
     </AnimatedTouchable>

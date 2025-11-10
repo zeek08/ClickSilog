@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, Modal } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import { alertService } from '../../services/alertService';
@@ -13,6 +15,7 @@ const DISCOUNT_TYPES = [
 ];
 
 const DiscountManager = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [discounts, setDiscounts] = useState([]);
   const [form, setForm] = useState({ 
@@ -221,7 +224,7 @@ const DiscountManager = ({ navigation }) => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -277,15 +280,20 @@ const DiscountManager = ({ navigation }) => {
           styles.addButton,
           {
             backgroundColor: theme.colors.primary,
-            borderRadius: borderRadius.lg,
-            paddingVertical: spacing.md,
+            borderRadius: borderRadius.md,
+            paddingVertical: spacing.sm + spacing.xs,
+            paddingHorizontal: spacing.md,
             margin: spacing.md,
             marginBottom: spacing.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: spacing.sm,
+            gap: spacing.xs,
             shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 1,
           }
         ]}
         onPress={openAdd}
@@ -293,14 +301,17 @@ const DiscountManager = ({ navigation }) => {
         <Icon
           name="add"
           library="ionicons"
-          size={24}
+          size={18}
           color={theme.colors.onPrimary}
+          responsive={false}
+          hitArea={false}
         />
         <Text style={[
           styles.addButtonText,
           {
             color: theme.colors.onPrimary,
-            ...typography.bodyBold,
+            fontSize: 14,
+            fontWeight: '600',
           }
         ]}>
           Add New Discount
@@ -364,26 +375,30 @@ const DiscountManager = ({ navigation }) => {
                   {
                     backgroundColor: valid ? theme.colors.successLight : theme.colors.errorLight,
                     borderColor: valid ? theme.colors.success : theme.colors.error,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.xs,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 1.5,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: 3,
+                    paddingHorizontal: spacing.xs + 2,
+                    borderWidth: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: spacing.xs,
+                    justifyContent: 'center',
                   }
                 ]}>
                   <Icon
                     name={valid ? 'checkmark-circle' : 'close-circle'}
                     library="ionicons"
-                    size={14}
+                    size={10}
                     color={valid ? theme.colors.success : theme.colors.error}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: spacing.xs / 2 }}
                   />
                   <Text style={[
                     styles.statusText,
                     {
                       color: valid ? theme.colors.success : theme.colors.error,
-                      ...typography.captionBold,
+                      fontSize: 11,
+                      fontWeight: '600',
                     }
                   ]}>
                     {valid ? 'Active' : 'Inactive'}
@@ -439,11 +454,15 @@ const DiscountManager = ({ navigation }) => {
                     styles.editBtn,
                     {
                       backgroundColor: theme.colors.primary,
-                      borderRadius: borderRadius.md,
-                      paddingVertical: spacing.sm,
-                      paddingHorizontal: spacing.md,
+                      borderRadius: borderRadius.sm,
+                      paddingVertical: spacing.xs + 1,
+                      paddingHorizontal: spacing.sm,
                       flex: 1,
                       shadowColor: theme.colors.primary,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
                     }
                   ]}
                   onPress={() => openEdit(item)}
@@ -451,15 +470,18 @@ const DiscountManager = ({ navigation }) => {
                   <Icon
                     name="create"
                     library="ionicons"
-                    size={16}
+                    size={14}
                     color={theme.colors.onPrimary}
-                    style={{ marginRight: spacing.xs }}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.editBtnText,
                     {
                       color: theme.colors.onPrimary,
-                      ...typography.captionBold,
+                      fontSize: 12,
+                      fontWeight: '600',
                     }
                   ]}>
                     Edit
@@ -469,12 +491,13 @@ const DiscountManager = ({ navigation }) => {
                   style={[
                     styles.disableBtn,
                     {
-                      backgroundColor: theme.colors.warning,
-                      borderRadius: borderRadius.md,
-                      paddingVertical: spacing.sm,
-                      paddingHorizontal: spacing.md,
+                      backgroundColor: item.active ? theme.colors.surfaceVariant : theme.colors.success,
+                      borderColor: item.active ? theme.colors.border : theme.colors.success,
+                      borderRadius: borderRadius.sm,
+                      paddingVertical: spacing.xs + 1,
+                      paddingHorizontal: spacing.sm,
                       flex: 1,
-                      shadowColor: theme.colors.warning,
+                      borderWidth: 1,
                     }
                   ]}
                   onPress={() => toggle(item)}
@@ -482,15 +505,18 @@ const DiscountManager = ({ navigation }) => {
                   <Icon
                     name={item.active ? 'eye-off' : 'eye'}
                     library="ionicons"
-                    size={16}
-                    color="#FFFFFF"
-                    style={{ marginRight: spacing.xs }}
+                    size={14}
+                    color={item.active ? theme.colors.textSecondary : theme.colors.onPrimary}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.disableBtnText,
                     {
-                      color: '#FFFFFF',
-                      ...typography.captionBold,
+                      color: item.active ? theme.colors.textSecondary : theme.colors.onPrimary,
+                      fontSize: 12,
+                      fontWeight: '600',
                     }
                   ]}>
                     {item.active ? 'Disable' : 'Enable'}
@@ -501,11 +527,15 @@ const DiscountManager = ({ navigation }) => {
                     styles.deleteBtn,
                     {
                       backgroundColor: theme.colors.error,
-                      borderRadius: borderRadius.md,
-                      paddingVertical: spacing.sm,
-                      paddingHorizontal: spacing.md,
+                      borderRadius: borderRadius.sm,
+                      paddingVertical: spacing.xs + 1,
+                      paddingHorizontal: spacing.sm,
                       flex: 1,
                       shadowColor: theme.colors.error,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
                     }
                   ]}
                   onPress={() => remove(item)}
@@ -513,15 +543,18 @@ const DiscountManager = ({ navigation }) => {
                   <Icon
                     name="trash"
                     library="ionicons"
-                    size={16}
+                    size={14}
                     color="#FFFFFF"
-                    style={{ marginRight: spacing.xs }}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.deleteBtnText,
                     {
                       color: '#FFFFFF',
-                      ...typography.captionBold,
+                      fontSize: 12,
+                      fontWeight: '600',
                     }
                   ]}>
                     Delete
@@ -573,7 +606,7 @@ const DiscountManager = ({ navigation }) => {
             {
               backgroundColor: theme.colors.surface,
               borderBottomColor: theme.colors.border,
-              paddingTop: spacing.xl + spacing.sm,
+              paddingTop: insets.top + spacing.lg,
               paddingHorizontal: spacing.md,
               paddingBottom: spacing.md,
             }
@@ -616,13 +649,16 @@ const DiscountManager = ({ navigation }) => {
               />
             </AnimatedButton>
           </View>
-          <View style={[
-            styles.modalContent,
-            {
+          <KeyboardAwareScrollView
+            enableOnAndroid={true}
+            extraScrollHeight={80}
+            keyboardShouldPersistTaps="handled"
+            style={{ flex: 1 }}
+            contentContainerStyle={{
               backgroundColor: theme.colors.background,
               padding: spacing.lg,
-            }
-          ]}>
+            }}
+          >
             <Text style={[
               styles.label,
               {
@@ -872,7 +908,7 @@ const DiscountManager = ({ navigation }) => {
                 Save
               </Text>
             </AnimatedButton>
-          </View>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
     </View>

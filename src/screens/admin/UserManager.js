@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, Modal, ScrollView } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import { validatePassword, getPasswordStrengthColor, getPasswordStrengthText } from '../../utils/passwordValidation';
@@ -13,6 +15,7 @@ import AnimatedButton from '../../components/ui/AnimatedButton';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 
 const UserManager = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { isTablet } = useResponsive();
   const [users, setUsers] = useState([]);
@@ -249,18 +252,30 @@ const UserManager = ({ navigation }) => {
             {
               backgroundColor: item.status === 'active' ? theme.colors.successLight : theme.colors.errorLight,
               borderColor: item.status === 'active' ? theme.colors.success : theme.colors.error,
-              borderRadius: borderRadius.md,
-              paddingVertical: spacing.xs / 2,
-              paddingHorizontal: spacing.sm,
-              borderWidth: 1.5,
+              borderRadius: borderRadius.sm,
+              paddingVertical: 3,
+              paddingHorizontal: spacing.xs + 2,
+              borderWidth: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
             }
           ]}>
+            <Icon
+              name={item.status === 'active' ? 'checkmark-circle' : 'close-circle'}
+              library="ionicons"
+              size={10}
+              color={item.status === 'active' ? theme.colors.success : theme.colors.error}
+              responsive={false}
+              hitArea={false}
+              style={{ marginRight: spacing.xs / 2 }}
+            />
             <Text style={[
               styles.statusText,
               {
                 color: item.status === 'active' ? theme.colors.success : theme.colors.error,
-                ...typography.caption,
-                fontSize: 10,
+                fontSize: 11,
+                fontWeight: '600',
               }
             ]}>
               {item.status === 'active' ? 'Active' : 'Inactive'}
@@ -300,7 +315,7 @@ const UserManager = ({ navigation }) => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -353,20 +368,40 @@ const UserManager = ({ navigation }) => {
           styles.addButton,
           {
             backgroundColor: theme.colors.primary,
-            borderRadius: borderRadius.lg,
-            paddingVertical: spacing.md,
+            borderRadius: borderRadius.md,
+            paddingVertical: spacing.sm + spacing.xs,
+            paddingHorizontal: spacing.md,
             margin: spacing.md,
             marginBottom: spacing.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: spacing.sm,
+            gap: spacing.xs,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 1,
           }
         ]}
         onPress={openAdd}
       >
-        <Icon name="add" library="ionicons" size={24} color="#FFFFFF" />
-        <Text style={[styles.addButtonText, { color: '#FFFFFF', ...typography.bodyBold }]}>
+        <Icon 
+          name="add" 
+          library="ionicons" 
+          size={18} 
+          color="#FFFFFF"
+          responsive={false}
+          hitArea={false}
+        />
+        <Text style={[
+          styles.addButtonText, 
+          { 
+            color: '#FFFFFF', 
+            fontSize: 14,
+            fontWeight: '600',
+          }
+        ]}>
           Add User
         </Text>
       </AnimatedButton>
@@ -376,6 +411,11 @@ const UserManager = ({ navigation }) => {
         renderItem={renderUser}
         keyExtractor={(item) => item.id || `${item.username}_${item.role}`}
         contentContainerStyle={{ padding: spacing.md }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
         ListEmptyComponent={
           <View style={[styles.emptyContainer, { padding: spacing.xxl }]}>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary, ...typography.body }]}>
@@ -399,7 +439,12 @@ const UserManager = ({ navigation }) => {
               {editingUser ? 'Edit User' : 'Add User'}
             </Text>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              enableOnAndroid={true}
+              extraScrollHeight={80}
+              keyboardShouldPersistTaps="handled"
+            >
               <View style={{ gap: spacing.md }}>
                 <View>
                   <Text style={[styles.label, { color: theme.colors.text, ...typography.caption }]}>Display Name</Text>
@@ -531,7 +576,7 @@ const UserManager = ({ navigation }) => {
                   </View>
                 </View>
               </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View style={[styles.modalActions, { marginTop: spacing.md, gap: spacing.sm }]}>
               <AnimatedButton

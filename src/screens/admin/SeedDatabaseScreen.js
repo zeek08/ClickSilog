@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { seedFirestore, migrateMenuCategory } from '../../services/firestoreSeed';
 import { appConfig } from '../../config/appConfig';
@@ -23,6 +24,7 @@ const hexToRgba = (hex, opacity) => {
 
 const SeedDatabaseScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [seeding, setSeeding] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -133,7 +135,7 @@ const SeedDatabaseScreen = () => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -143,45 +145,34 @@ const SeedDatabaseScreen = () => {
             <AnimatedButton
               onPress={() => navigation.goBack()}
               style={{
-                width: 44,
-                height: 44,
-                justifyContent: 'center',
-                alignItems: 'center',
                 backgroundColor: 'transparent',
                 marginRight: spacing.sm,
               }}
             >
               <View
                 style={{
-                  width: 44,
-                  height: 44,
-                  alignItems: 'center',
+                  backgroundColor: hexToRgba(theme.colors.error, 0.1),
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.error + '40',
+                  padding: spacing.sm,
+                  borderRadius: 999,
                   justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 2,
+                  elevation: 1,
                 }}
               >
-                <View
-                  style={{
-                    backgroundColor: hexToRgba(theme.colors.error, 0.1),
-                    borderWidth: 1.5,
-                    borderColor: theme.colors.error + '40',
-                    padding: spacing.sm,
-                    borderRadius: 999,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    shadowColor: theme.colors.error,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: 3,
-                  }}
-                >
-                  <Icon
-                    name="arrow-back"
-                    library="ionicons"
-                    size={22}
-                    color={theme.colors.error}
-                  />
-                </View>
+                <Icon
+                  name="arrow-back"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
               </View>
             </AnimatedButton>
             <Icon

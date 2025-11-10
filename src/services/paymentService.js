@@ -2,6 +2,11 @@ import { appConfig } from '../config/appConfig';
 import axios from 'axios';
 
 const PAYMONGO_API_URL = 'https://api.paymongo.com/v1';
+
+// SECURITY WARNING: Secret key should NEVER be used client-side
+// This is only for legacy payment intent functions (not used for GCash)
+// GCash payments use Cloud Functions which securely handle the secret key
+// DO NOT expose secret keys in client-side code
 const PAYMONGO_SECRET_KEY = process.env.EXPO_PUBLIC_PAYMONGO_SECRET_KEY || appConfig.paymongo.secretKey;
 
 // Helper to create Basic Auth header (compatible with React Native)
@@ -44,7 +49,13 @@ const mockCharge = async ({ amount, currency = 'PHP', description }) => {
 
 /**
  * Create a payment intent (client-side, uses public key)
- * Note: For production, this should be done server-side via Cloud Functions
+ * 
+ * SECURITY WARNING: This function uses secret key client-side which is NOT secure
+ * This is a legacy function and should NOT be used for GCash payments
+ * 
+ * For GCash payments, use createPaymentSourceViaFunction() which calls Cloud Functions
+ * 
+ * @deprecated Use createPaymentIntentViaFunction() or createPaymentSourceViaFunction() instead
  */
 export const createPaymentIntent = async ({ amount, currency = 'PHP', description }) => {
   if (appConfig.USE_MOCKS) {
@@ -52,8 +63,9 @@ export const createPaymentIntent = async ({ amount, currency = 'PHP', descriptio
   }
 
   try {
-    // Note: This uses secret key on client-side which is NOT secure
-    // In production, call your Cloud Function instead
+    // SECURITY WARNING: This uses secret key on client-side which is NOT secure
+    // This function should NOT be used for production GCash payments
+    // Use Cloud Functions (createPaymentSourceViaFunction) instead
     if (!PAYMONGO_SECRET_KEY || PAYMONGO_SECRET_KEY.includes('_XXXX')) {
       throw new Error('PayMongo secret key not configured. Use Cloud Functions for secure payment processing.');
     }
@@ -219,19 +231,108 @@ export const attachPaymentMethod = async (paymentIntentId, paymentMethodId) => {
 };
 
 /**
+ * Create payment source via Cloud Function (for GCash QR payments)
+ * @param {Object} params - Payment source parameters
+ * @param {number} params.amount - Amount in PHP
+ * @param {string} params.currency - Currency code (default: PHP)
+ * @param {string} params.description - Payment description
+ * @param {string} params.orderId - Order ID (required)
+ * @param {string} params.tableNumber - Table number (optional)
+ * @param {string} params.redirectUrl - Redirect URL (optional)
+ * @returns {Promise<Object>} Source creation result
+ */
+export const createPaymentSourceViaFunction = async ({ amount, currency = 'PHP', description, orderId, tableNumber, redirectUrl }) => {
+  if (appConfig.USE_MOCKS) {
+    // Simulate source creation
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      success: true,
+      sourceId: `mock_source_${Date.now()}`,
+      checkoutUrl: `https://pay.paymongo.com/checkout/mock_${Date.now()}`,
+      qrData: `https://pay.paymongo.com/qr/mock_${Date.now()}`,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+      status: 'pending'
+    };
+  }
+
+  try {
+    if (!orderId) {
+      return {
+        success: false,
+        error: 'Order ID is required'
+      };
+    }
+
+    // Get Cloud Function region from config or default to us-central1
+    const region = appConfig.firebase.region || process.env.EXPO_PUBLIC_FIREBASE_REGION || 'us-central1';
+    const functionsUrl = `https://${region}-${appConfig.firebase.projectId}.cloudfunctions.net/createPaymentSource`;
+    
+    const response = await axios.post(functionsUrl, {
+      amount,
+      currency,
+      description: description || `Order #${orderId}`,
+      orderId,
+      tableNumber: tableNumber || null,
+      redirectUrl: redirectUrl || null
+    }, {
+      timeout: 30000, // 30 second timeout
+    });
+
+    if (response.data.success) {
+      return {
+        success: true,
+        // Support both old (sourceId) and new (paymentIntentId) formats
+        sourceId: response.data.sourceId || response.data.paymentIntentId,
+        paymentIntentId: response.data.paymentIntentId,
+        methodId: response.data.methodId,
+        checkoutUrl: response.data.checkoutUrl,
+        qrData: response.data.qrData, // QR code image URI
+        expiresAt: response.data.expiresAt,
+        status: 'pending'
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to create payment source');
+    }
+  } catch (error) {
+    console.error('Cloud Function payment source error:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
  * Process payment with PayMongo (complete flow)
+ * For GCash, this creates a Source and returns QR code data
+ * For other methods, uses Payment Intent (legacy)
  * @param {Object} params - Payment parameters
  * @param {number} params.amount - Amount in PHP
  * @param {string} params.currency - Currency code (default: PHP)
  * @param {string} params.description - Payment description
  * @param {string} params.orderId - Order ID
  * @param {string} params.paymentMethod - Payment method (gcash, card, paymaya)
+ * @param {string} params.tableNumber - Table number (for GCash)
  * @returns {Promise<Object>} Payment result
  */
-export const processPayment = async ({ amount, currency = 'PHP', description, orderId, paymentMethod = 'gcash' }) => {
+export const processPayment = async ({ amount, currency = 'PHP', description, orderId, paymentMethod = 'gcash', tableNumber }) => {
   if (appConfig.USE_MOCKS) {
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if (paymentMethod === 'gcash') {
+      return {
+        success: true,
+        sourceId: `mock_source_${Date.now()}`,
+        checkoutUrl: `https://pay.paymongo.com/checkout/mock_${Date.now()}`,
+        qrData: `https://pay.paymongo.com/qr/mock_${Date.now()}`,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        status: 'pending',
+        amount,
+        currency
+      };
+    }
+    
     return {
       success: true,
       status: 'paid',
@@ -243,7 +344,36 @@ export const processPayment = async ({ amount, currency = 'PHP', description, or
   }
 
   try {
-    // Step 1: Create payment intent via Cloud Function (secure)
+    // For GCash, use Source API (QR code flow)
+    if (paymentMethod === 'gcash') {
+      const sourceResult = await createPaymentSourceViaFunction({
+        amount,
+        currency,
+        description: description || `Order #${orderId}`,
+        orderId,
+        tableNumber
+      });
+
+      if (!sourceResult.success) {
+        return sourceResult;
+      }
+
+      return {
+        success: true,
+        // Support both old (sourceId) and new (paymentIntentId) formats
+        sourceId: sourceResult.sourceId || sourceResult.paymentIntentId,
+        paymentIntentId: sourceResult.paymentIntentId,
+        methodId: sourceResult.methodId,
+        checkoutUrl: sourceResult.checkoutUrl,
+        qrData: sourceResult.qrData, // QR code image URI
+        expiresAt: sourceResult.expiresAt,
+        status: 'pending',
+        amount,
+        currency
+      };
+    }
+
+    // For other payment methods, use Payment Intent (legacy)
     const intentResult = await createPaymentIntentViaFunction({
       amount,
       currency,
@@ -254,10 +384,6 @@ export const processPayment = async ({ amount, currency = 'PHP', description, or
     if (!intentResult.success) {
       return intentResult;
     }
-
-    // Step 2: For now, return the payment intent
-    // In production, you would integrate PayMongo SDK here to collect payment method
-    // and attach it to the payment intent
     
     return {
       success: true,
@@ -276,11 +402,138 @@ export const processPayment = async ({ amount, currency = 'PHP', description, or
   }
 };
 
+/**
+ * Create checkout session via Cloud Function (Checkout API)
+ * This creates a PayMongo-hosted page where users finish GCash payment
+ * @param {Object} params - Payment parameters
+ * @param {number} params.amount - Amount in PHP
+ * @param {string} params.currency - Currency code (default: PHP)
+ * @param {string} params.description - Payment description
+ * @param {string} params.orderId - Order ID
+ * @param {string} params.redirectUrl - Redirect URL after payment
+ * @returns {Promise<Object>} Checkout session result
+ */
+export const createCheckoutSessionViaFunction = async ({ amount, currency = 'PHP', description, orderId, redirectUrl }) => {
+  if (appConfig.USE_MOCKS) {
+    // Simulate checkout session creation
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      success: true,
+      checkoutSessionId: `mock_checkout_${Date.now()}`,
+      checkoutUrl: `https://pay.paymongo.com/checkout/mock_${Date.now()}`,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+      status: 'pending'
+    };
+  }
+
+  try {
+    if (!orderId) {
+      return {
+        success: false,
+        error: 'Order ID is required'
+      };
+    }
+
+    // Get Cloud Function region from config or default to us-central1
+    const region = appConfig.firebase.region || process.env.EXPO_PUBLIC_FIREBASE_REGION || 'us-central1';
+    const functionsUrl = `https://${region}-${appConfig.firebase.projectId}.cloudfunctions.net/createCheckoutSession`;
+    
+    const response = await axios.post(functionsUrl, {
+      amount,
+      currency,
+      description: description || `Order #${orderId}`,
+      orderId,
+      redirectUrl: redirectUrl || null
+    }, {
+      timeout: 30000, // 30 second timeout
+    });
+
+    if (response.data.success) {
+      return {
+        success: true,
+        checkoutSessionId: response.data.checkoutSessionId,
+        checkoutUrl: response.data.checkoutUrl,
+        expiresAt: response.data.expiresAt,
+        status: 'pending'
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to create checkout session');
+    }
+  } catch (error) {
+    console.error('Cloud Function checkout session error:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Check payment status via Cloud Function (fallback if webhook fails)
+ * @param {Object} params - Payment status check parameters
+ * @param {string} params.orderId - Order ID (required)
+ * @param {string} params.paymentIntentId - Payment Intent ID (optional, will use from order if not provided)
+ * @returns {Promise<Object>} Payment status check result
+ */
+export const checkPaymentStatusViaFunction = async ({ orderId, paymentIntentId }) => {
+  if (appConfig.USE_MOCKS) {
+    return {
+      success: true,
+      status: 'paid',
+      orderId,
+      paymentIntentId: paymentIntentId || `mock_pi_${Date.now()}`,
+    };
+  }
+
+  try {
+    if (!orderId) {
+      return {
+        success: false,
+        error: 'Order ID is required',
+      };
+    }
+
+    // Get Cloud Function region from config or default to us-central1
+    const region = appConfig.firebase.region || process.env.EXPO_PUBLIC_FIREBASE_REGION || 'us-central1';
+    const functionsUrl = `https://${region}-${appConfig.firebase.projectId}.cloudfunctions.net/checkPaymentStatus`;
+
+    const response = await axios.post(functionsUrl, {
+      orderId,
+      paymentIntentId,
+    }, {
+      timeout: 30000, // 30 second timeout
+    });
+
+    if (response.data.success) {
+      return {
+        success: true,
+        orderId: response.data.orderId,
+        paymentIntentId: response.data.paymentIntentId,
+        paymentId: response.data.paymentId,
+        status: response.data.status,
+        amount: response.data.amount,
+        message: response.data.message,
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to check payment status');
+    }
+  } catch (error) {
+    console.error('Cloud Function payment status check error:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message,
+    };
+  }
+};
+
 export const paymentService = {
   createPaymentIntent,
   createPaymentIntentViaFunction,
+  createPaymentSourceViaFunction,
+  createCheckoutSessionViaFunction,
   getPaymentIntent,
   attachPaymentMethod,
-  processPayment
+  processPayment,
+  checkPaymentStatusViaFunction,
 };
 

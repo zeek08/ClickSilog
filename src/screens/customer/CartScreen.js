@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../../components/ui/Icon';
 import AnimatedButton from '../../components/ui/AnimatedButton';
 
 const CartScreen = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { items, total, updateQty, removeFromCart, clearCart } = useCart();
 
@@ -16,7 +18,7 @@ const CartScreen = ({ navigation, route }) => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
           borderBottomWidth: 1,
@@ -63,6 +65,11 @@ const CartScreen = ({ navigation, route }) => {
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
         renderItem={({ item }) => (
           <View style={[
             styles.card, 
@@ -92,19 +99,34 @@ const CartScreen = ({ navigation, route }) => {
                 style={[
                   styles.removeBtn, 
                   { 
-                    backgroundColor: theme.colors.errorLight,
+                    backgroundColor: 'transparent',
                     borderRadius: borderRadius.round,
                     width: 36,
                     height: 36,
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }
                 ]}
               >
-                <Icon
-                  name="close"
-                  library="ionicons"
-                  size={20}
-                  color={theme.colors.error}
-                />
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: theme.colors.errorLight,
+                    borderRadius: borderRadius.round,
+                  }}
+                >
+                  <Icon
+                    name="close"
+                    library="ionicons"
+                    size={18}
+                    color={theme.colors.error}
+                    responsive={true}
+                    hitArea={false}
+                  />
+                </View>
               </AnimatedButton>
             </View>
             {!!item.addOns?.length && (
@@ -117,8 +139,8 @@ const CartScreen = ({ navigation, route }) => {
                   marginTop: spacing.sm,
                 }
               ]}>
-                {item.addOns.map((a) => (
-                  <View key={a.id} style={[styles.addOnRow, { gap: spacing.xs }]}>
+                {item.addOns.map((a, aIdx) => (
+                  <View key={`${item.id}-addon-${a.id || aIdx}`} style={[styles.addOnRow, { gap: spacing.xs }]}>
                     <Icon
                       name="add-circle"
                       library="ionicons"
@@ -356,7 +378,8 @@ const CartScreen = ({ navigation, route }) => {
                   backgroundColor: theme.colors.surfaceVariant,
                   borderColor: theme.colors.border,
                   borderRadius: borderRadius.lg,
-                  paddingVertical: spacing.md,
+                  paddingVertical: spacing.md + spacing.xs,
+                  paddingHorizontal: spacing.md,
                   flex: 1,
                   borderWidth: 1.5,
                 }
@@ -366,15 +389,18 @@ const CartScreen = ({ navigation, route }) => {
               <Icon
                 name="trash-outline"
                 library="ionicons"
-                size={18}
+                size={20}
                 color={theme.colors.error}
-                style={{ marginRight: spacing.xs }}
+                responsive={true}
+                hitArea={false}
+                style={{ marginRight: spacing.sm }}
               />
               <Text style={[
                 styles.btnSecondaryText, 
                 { 
                   color: theme.colors.error,
-                  ...typography.bodyBold,
+                  ...typography.bodyMedium,
+                  fontWeight: '600',
                 }
               ]}>
                 Clear
@@ -386,7 +412,8 @@ const CartScreen = ({ navigation, route }) => {
                 { 
                   backgroundColor: theme.colors.primary,
                   borderRadius: borderRadius.lg,
-                  paddingVertical: spacing.md,
+                  paddingVertical: spacing.md + spacing.xs,
+                  paddingHorizontal: spacing.md,
                   flex: 2,
                   shadowColor: theme.colors.primary,
                 }
@@ -395,7 +422,11 @@ const CartScreen = ({ navigation, route }) => {
             >
               <Text style={[
                 styles.btnPrimaryText,
-                { color: theme.colors.onPrimary }
+                { 
+                  color: theme.colors.onPrimary,
+                  ...typography.bodyMedium,
+                  fontWeight: '600',
+                }
               ]}>
                 Checkout
               </Text>
@@ -404,7 +435,9 @@ const CartScreen = ({ navigation, route }) => {
                 library="ionicons"
                 size={20}
                 color={theme.colors.onPrimary}
-                style={{ marginLeft: spacing.xs }}
+                responsive={true}
+                hitArea={false}
+                style={{ marginLeft: spacing.sm }}
               />
             </AnimatedButton>
           </View>

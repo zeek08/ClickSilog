@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
@@ -11,7 +12,20 @@ import AnimatedButton from '../components/ui/AnimatedButton';
 import Icon from '../components/ui/Icon';
 import ThemeToggle from '../components/ui/ThemeToggle';
 
+// Helper function to convert hex color to rgba with opacity
+const hexToRgba = (hex, opacity) => {
+  // Remove # if present
+  const cleanHex = hex.replace('#', '');
+  // Parse RGB values
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  // Return rgba string
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
 const LoginScreen = () => {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +76,12 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: theme.colors.background, flex: 1 }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.select({ ios: 80, android: 100 })}
+      >
       {/* Header bar with Home and Theme buttons */}
       <View style={[
         styles.headerBar,
@@ -70,45 +89,59 @@ const LoginScreen = () => {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
           borderBottomWidth: 1.5,
-          paddingTop: spacing.xl + spacing.sm,
+              paddingTop: insets.top + spacing.lg,
           paddingBottom: spacing.md,
           paddingHorizontal: spacing.lg,
         }
       ]}>
-        <AnimatedButton
-          onPress={() => navigation.navigate('Home')}
-          style={[
-            styles.headerButton,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderColor: theme.colors.border,
-              borderRadius: borderRadius.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              borderWidth: 1.5,
-              flexDirection: 'row',
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AnimatedButton
+            onPress={() => navigation.navigate('Home')}
+            style={{
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
               alignItems: 'center',
-              gap: spacing.xs,
-            }
-          ]}
-        >
-          <Icon
-            name="home"
-            library="ionicons"
-            size={18}
-            color={theme.colors.text}
-          />
-          <Text style={[
-            styles.headerButtonText,
-            {
-              color: theme.colors.text,
-              ...typography.captionBold,
-            }
-          ]}>
-            Home
-          </Text>
-        </AnimatedButton>
-        <ThemeToggle />
+              backgroundColor: 'transparent',
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: hexToRgba(theme.colors.info || '#3B82F6', 0.1),
+                  borderWidth: 1.5,
+                  borderColor: (theme.colors.info || '#3B82F6') + '40',
+                  padding: spacing.sm,
+                  borderRadius: 999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.info || '#3B82F6',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="home"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.info || '#3B82F6'}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
+          </AnimatedButton>
+          <ThemeToggle />
+        </View>
       </View>
 
       <View style={[styles.contentContainer, { padding: spacing.xl }]}>
@@ -137,33 +170,33 @@ const LoginScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={[styles.title, { color: theme.colors.text, ...typography.h1, marginTop: spacing.lg }]}>
+            <Text style={[styles.title, { color: theme.colors.text || '#1E1E1E', ...typography.h1, marginTop: spacing.lg }]}>
               Login
             </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary, ...typography.body, marginTop: spacing.sm }]}>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary || '#6D6D6D', ...typography.body, marginTop: spacing.sm }]}>
               Enter your credentials to continue
             </Text>
           </View>
 
           <View style={[styles.form, { gap: spacing.lg }]}>
             <View>
-              <Text style={[styles.label, { color: theme.colors.text, ...typography.caption }]}>
+              <Text style={[styles.label, { color: theme.colors.text || '#1E1E1E', ...typography.caption }]}>
                 Username
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
+                    backgroundColor: theme.colors.surface || '#FFFFFF',
+                    borderColor: theme.colors.border || '#E0E0E0',
+                    color: theme.colors.text || '#1E1E1E',
                     borderRadius: borderRadius.md,
                     padding: spacing.md,
                     ...typography.body,
                   }
                 ]}
                 placeholder="Enter username"
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholderTextColor={theme.colors.textSecondary || '#6D6D6D'}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -173,14 +206,14 @@ const LoginScreen = () => {
             </View>
 
             <View>
-              <Text style={[styles.label, { color: theme.colors.text, ...typography.caption }]}>
+              <Text style={[styles.label, { color: theme.colors.text || '#1E1E1E', ...typography.caption }]}>
                 Password
               </Text>
               <View style={[
                 styles.passwordContainer,
                 {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.surface || '#FFFFFF',
+                  borderColor: theme.colors.border || '#E0E0E0',
                   borderRadius: borderRadius.md,
                   borderWidth: 1,
                 }
@@ -189,7 +222,7 @@ const LoginScreen = () => {
                 style={[
                   styles.passwordInput,
                   {
-                    color: theme.colors.text,
+                    color: theme.colors.text || '#1E1E1E',
                     padding: spacing.md,
                     paddingRight: spacing.sm,
                     flex: 1,
@@ -197,7 +230,7 @@ const LoginScreen = () => {
                   }
                 ]}
                 placeholder="Enter password"
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholderTextColor={theme.colors.textSecondary || '#6D6D6D'}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -257,6 +290,7 @@ const LoginScreen = () => {
           </View>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -267,23 +301,12 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  headerButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  headerButtonText: {
-    fontWeight: '600',
   },
   contentContainer: {
     flex: 1,

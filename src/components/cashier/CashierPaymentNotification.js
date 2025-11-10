@@ -242,24 +242,30 @@ const CashierPaymentNotification = () => {
             {
               backgroundColor: statusConfig.bgColor,
               borderColor: statusConfig.color + '40',
-              borderRadius: borderRadius.md,
-              paddingVertical: spacing.xs,
-              paddingHorizontal: spacing.sm,
-              borderWidth: 1.5,
+              borderRadius: borderRadius.sm,
+              paddingVertical: 3,
+              paddingHorizontal: spacing.xs + 2,
+              borderWidth: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
             }
           ]}>
             <Icon
               name={statusConfig.icon}
               library="ionicons"
-              size={16}
+              size={11}
               color={statusConfig.color}
+              responsive={false}
+              hitArea={false}
+              style={{ marginRight: spacing.xs / 2 }}
             />
             <Text style={[
               styles.statusText,
               {
                 color: statusConfig.color,
-                ...typography.captionBold,
-                marginLeft: spacing.xs,
+                fontSize: 11,
+                fontWeight: '600',
               }
             ]}>
               {statusConfig.label}
@@ -356,8 +362,8 @@ const CashierPaymentNotification = () => {
       <AnimatedButton
         onPress={() => setShowModal(true)}
         style={{
-          width: 45,
-          height: 45,
+          width: 44,
+          height: 44,
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: 'transparent',
@@ -366,8 +372,8 @@ const CashierPaymentNotification = () => {
       >
         <View
           style={{
-            width: 45,
-            height: 45,
+            width: 44,
+            height: 44,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -375,17 +381,17 @@ const CashierPaymentNotification = () => {
           <View
             style={{
               backgroundColor: pendingOrders.length > 0 
-                ? hexToRgba(theme.colors.success || '#10B981', 0.1) 
+                ? hexToRgba(theme.colors.info || '#3B82F6', 0.1) 
                 : hexToRgba(theme.colors.textSecondary || '#6D6D6D', 0.1),
               borderWidth: 1.5,
               borderColor: pendingOrders.length > 0 
-                ? ((theme.colors.success || '#10B981') + '40') 
+                ? ((theme.colors.info || '#3B82F6') + '40') 
                 : (theme.colors.border || theme.colors.textSecondary + '40'),
               padding: spacing.sm,
               borderRadius: 999,
               justifyContent: 'center',
               alignItems: 'center',
-              shadowColor: pendingOrders.length > 0 ? (theme.colors.success || '#10B981') : theme.colors.textSecondary,
+              shadowColor: pendingOrders.length > 0 ? (theme.colors.info || '#3B82F6') : theme.colors.textSecondary,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.2,
               shadowRadius: 4,
@@ -393,10 +399,12 @@ const CashierPaymentNotification = () => {
             }}
           >
             <Icon
-              name="cash"
+              name="notifications"
               library="ionicons"
-              size={21}
-              color={pendingOrders.length > 0 ? (theme.colors.success || '#10B981') : theme.colors.textSecondary}
+              size={22}
+              color={pendingOrders.length > 0 ? (theme.colors.info || '#3B82F6') : theme.colors.textSecondary}
+              responsive={true}
+              hitArea={false}
             />
           </View>
         </View>
@@ -408,34 +416,32 @@ const CashierPaymentNotification = () => {
               borderRadius: borderRadius.round,
               minWidth: 20,
               height: 20,
-              paddingHorizontal: pendingOrders.length > 9 ? 4 : 6,
+              paddingHorizontal: spacing.xs,
               position: 'absolute',
-              top: -6,
-              right: -6,
-              left: undefined,
+              top: -4,
+              right: -4,
               justifyContent: 'center',
               alignItems: 'center',
               borderWidth: 2,
               borderColor: theme.colors.surface,
               zIndex: 10,
-              elevation: 5,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.2,
+              shadowRadius: 2,
+              elevation: 2,
             }
           ]}>
             <Text 
               style={[
                 styles.badgeText,
                 {
-                  color: '#FFFFFF',
+                  color: theme.colors.onError || '#FFFFFF',
                   ...typography.captionBold,
-                  fontSize: 10,
-                  fontWeight: '800',
-                  includeFontPadding: false,
-                  textAlignVertical: 'center',
+                  fontSize: 11,
+                  fontWeight: 'bold',
                 }
               ]}
               numberOfLines={1}
-              adjustsFontSizeToFit={true}
-              minimumFontScale={0.8}
             >
               {pendingOrders.length > 99 ? '99+' : pendingOrders.length.toString()}
             </Text>
@@ -483,19 +489,47 @@ const CashierPaymentNotification = () => {
               <AnimatedButton
                 onPress={() => setShowModal(false)}
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 44,
+                  height: 44,
                   justifyContent: 'center',
                   alignItems: 'center',
                   backgroundColor: 'transparent',
                 }}
               >
-                <Icon
-                  name="close"
-                  library="ionicons"
-                  size={24}
-                  color={theme.colors.text}
-                />
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: hexToRgba(theme.colors.error, 0.1), // Soft 10% opacity halo
+                      borderWidth: 1.5,
+                      borderColor: theme.colors.error + '40',
+                      padding: spacing.sm,
+                      borderRadius: 999, // Perfect circle
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      shadowColor: theme.colors.error,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Icon
+                      name="close"
+                      library="ionicons"
+                      size={20}
+                      color={theme.colors.error}
+                      responsive={true}
+                      hitArea={false}
+                    />
+                  </View>
+                </View>
               </AnimatedButton>
             </View>
 
@@ -658,7 +692,7 @@ const CashierPaymentNotification = () => {
           animationType="fade"
           onRequestClose={() => setNotification({ ...notification, visible: false })}
         >
-          <View style={[styles.notificationOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.notificationOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: spacing.md }]}>
             <View style={[
               styles.notificationContainer,
               {
@@ -727,13 +761,10 @@ const CashierPaymentNotification = () => {
 
 const styles = StyleSheet.create({
   badge: {
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    // Styles handled inline
   },
   badgeText: {
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
@@ -822,7 +853,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    // padding will be set dynamically using theme.spacing
   },
   notificationContainer: {
     width: '100%',

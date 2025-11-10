@@ -24,9 +24,11 @@ const DeveloperScreenSelection = () => {
 
   const selectScreen = (role) => {
     setRole(role);
+    // Navigation will be handled by AppNavigator based on user role
+    // Reset to Home and let AppNavigator route to the correct stack
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Main' }]
+      routes: [{ name: 'Home' }]
     });
   };
 

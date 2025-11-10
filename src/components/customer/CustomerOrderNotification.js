@@ -36,6 +36,7 @@ const CustomerOrderNotification = () => {
   // Track previous order states to detect changes
   const previousOrdersRef = useRef(new Map());
   const hasShownInitialNotificationRef = useRef(new Set());
+  const hasShownCompletedNotificationRef = useRef(new Set());
   
   // Notification modal state
   const [notification, setNotification] = useState({
@@ -131,15 +132,20 @@ const CustomerOrderNotification = () => {
             });
           }
           // Status changed to completed (from any previous status except completed)
-          // Only show notification if completed recently (within last 10 minutes)
-          else if (previousStatus !== 'completed' && currentStatus === 'completed') {
+          // Only show notification if:
+          // 1. Status actually changed (not on initial load)
+          // 2. Completed recently (within last 10 minutes)
+          // 3. Haven't shown this notification before
+          else if (previousStatus !== 'completed' && currentStatus === 'completed' && previousStatus !== undefined) {
             const completedAt = order.completedAt || order.updatedAt || order.timestamp || order.createdAt;
             const completedTime = new Date(completedAt).getTime();
             const now = Date.now();
             const tenMinutesAgo = now - (10 * 60 * 1000); // 10 minutes in milliseconds
             
-            // Only show notification if completed within the last 10 minutes
-            if (completedTime > tenMinutesAgo) {
+            // Only show notification if:
+            // - Completed within the last 10 minutes
+            // - Haven't shown this notification for this order before
+            if (completedTime > tenMinutesAgo && !hasShownCompletedNotificationRef.current.has(orderId)) {
               setNotification({
                 visible: true,
                 title: 'Order Completed!',
@@ -148,6 +154,7 @@ const CustomerOrderNotification = () => {
                 iconColor: theme.colors.success,
                 type: 'success',
               });
+              hasShownCompletedNotificationRef.current.add(orderId);
             }
           }
           
@@ -164,6 +171,7 @@ const CustomerOrderNotification = () => {
           if (!currentOrderIds.has(orderId)) {
             previousOrdersRef.current.delete(orderId);
             hasShownInitialNotificationRef.current.delete(orderId);
+            hasShownCompletedNotificationRef.current.delete(orderId);
           }
         });
         
@@ -244,24 +252,30 @@ const CustomerOrderNotification = () => {
             {
               backgroundColor: statusConfig.bgColor,
               borderColor: statusConfig.color + '40',
-              borderRadius: borderRadius.md,
-              paddingVertical: spacing.xs,
-              paddingHorizontal: spacing.sm,
-              borderWidth: 1.5,
+              borderRadius: borderRadius.sm,
+              paddingVertical: 3,
+              paddingHorizontal: spacing.xs + 2,
+              borderWidth: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
             }
           ]}>
             <Icon
               name={statusConfig.icon}
               library="ionicons"
-              size={16}
+              size={11}
               color={statusConfig.color}
+              responsive={false}
+              hitArea={false}
+              style={{ marginRight: spacing.xs / 2 }}
             />
             <Text style={[
               styles.statusText,
               {
                 color: statusConfig.color,
-                ...typography.captionBold,
-                marginLeft: spacing.xs,
+                fontSize: 11,
+                fontWeight: '600',
               }
             ]}>
               {statusConfig.label}
@@ -385,8 +399,10 @@ const CustomerOrderNotification = () => {
         <Icon
           name="notifications"
           library="ionicons"
-              size={20}
-              color={activeOrders.length > 0 ? theme.colors.info : theme.colors.textSecondary}
+          size={22}
+          color={activeOrders.length > 0 ? theme.colors.info : theme.colors.textSecondary}
+          responsive={true}
+          hitArea={false}
         />
           </View>
         </View>
@@ -461,25 +477,53 @@ const CustomerOrderNotification = () => {
                   Order History
                 </Text>
               </View>
-              <TouchableOpacity
+              <AnimatedButton
                 onPress={() => setShowModal(false)}
                 style={[
-                  styles.closeButton,
                   {
-                    backgroundColor: theme.colors.surfaceVariant,
-                    borderRadius: borderRadius.round,
-                    width: 36,
-                    height: 36,
+                    width: 44,
+                    height: 44,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'transparent',
                   }
                 ]}
               >
-                <Icon
-                  name="close"
-                  library="ionicons"
-                  size={20}
-                  color={theme.colors.text}
-                />
-              </TouchableOpacity>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: hexToRgba(theme.colors.error, 0.1), // Soft 10% opacity halo
+                      borderWidth: 1.5,
+                      borderColor: theme.colors.error + '40',
+                      padding: spacing.sm,
+                      borderRadius: 999, // Perfect circle
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      shadowColor: theme.colors.error,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Icon
+                      name="close"
+                      library="ionicons"
+                      size={20}
+                      color={theme.colors.error}
+                      responsive={true}
+                      hitArea={false}
+                    />
+                  </View>
+                </View>
+              </AnimatedButton>
             </View>
 
             {/* Tabs */}
@@ -557,6 +601,11 @@ const CustomerOrderNotification = () => {
                   }
                 ]}
                 showsVerticalScrollIndicator={false}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={10}
+                windowSize={10}
               />
             ) : (
               <View style={[styles.emptyContainer, { padding: spacing.xxl }]}>

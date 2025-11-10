@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, BackHandler, ScrollView } from 'react-native';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
-import { widthPercentage } from '../utils/responsive';
+import { widthPercentage, scale } from '../utils/responsive';
 import { useResponsive } from '../hooks/useResponsive';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Icon from '../components/ui/Icon';
@@ -42,8 +42,9 @@ const RoleButton = ({ label, iconName, color, onPress, theme, borderRadius, spac
         }
       ]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
-      <View style={[styles.roleContent, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.roleContent, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
         <View style={[
           styles.iconContainer,
           {
@@ -93,15 +94,17 @@ const HomeScreen = () => {
   }, []);
 
   const choose = (role) => {
-    setRole(role);
-    
-    // Navigate to appropriate login page based on role
+    // Navigate immediately on single tap - don't wait for setRole
+    // Navigation happens synchronously, setRole can happen in background
     if (role === 'customer') {
       navigation.navigate('TableNumber');
     } else {
       // For kitchen, cashier, and admin, go to login screen
       navigation.navigate('Login', { role });
     }
+    
+    // Set role in background (async, non-blocking)
+    setRole(role);
   };
 
   return (
@@ -133,15 +136,15 @@ const HomeScreen = () => {
               borderColor: theme.colors.primary + '40',
               shadowColor: theme.colors.primary,
               borderRadius: borderRadius.xl,
-              width: 100,
-              height: 100,
+              width: scale(100),
+              height: scale(100),
               borderWidth: 3,
             }
           ]}>
             <Icon
               name="restaurant"
               library="ionicons"
-              size={48}
+              size={scale(48)}
               color={theme.colors.primary}
             />
           </View>

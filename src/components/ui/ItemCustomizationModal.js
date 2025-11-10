@@ -1,9 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { firestoreService } from '../../services/firestoreService';
 import { useTheme } from '../../contexts/ThemeContext';
 import AnimatedButton from './AnimatedButton';
 import Icon from './Icon';
+
+// Helper function to convert hex color to rgba with opacity
+const hexToRgba = (hex, opacity) => {
+  // Remove # if present
+  const cleanHex = hex.replace('#', '');
+  // Parse RGB values
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  // Return rgba string
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
 
 const SelectableRow = ({ label, price, selected, onPress, theme, spacing, borderRadius, typography }) => (
   <TouchableOpacity
@@ -189,17 +202,14 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
   }, [addOns, links, isMealOrSilog, isSnack, isDrink, isSoftdrink, allowedMealAddOnNames]);
 
   const selectedAddOns = useMemo(() => {
-    // Flatten rice with quantities
-    const riceWithQty = selectedRice.flatMap((rice) => {
-      const qty = rice.qty || 1;
-      return Array(qty).fill(null).map(() => ({ ...rice, qty: 1 }));
-    });
+    // Rice is just selection (no quantity) - use as single items
+    const riceItems = selectedRice.map((rice) => ({ ...rice, qty: 1 }));
     // Flatten extras with quantities
     const extrasWithQty = selectedExtras.flatMap((extra) => {
       const qty = extra.qty || 1;
       return Array(qty).fill(null).map(() => ({ ...extra, qty: 1 }));
     });
-    return [...riceWithQty, selectedDrink, ...extrasWithQty].filter(Boolean);
+    return [...riceItems, selectedDrink, ...extrasWithQty].filter(Boolean);
   }, [selectedRice, selectedDrink, selectedExtras]);
 
   // Size pricing for snacks (default to item price for both sizes)
@@ -226,23 +236,12 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
         // If exists, remove it
         return prev.filter((x) => x.id !== id);
       } else {
-        // If not exists, add it with qty 1
-        return [...prev, { ...addon, qty: 1 }];
+        // If not exists, add it (no quantity needed for rice)
+        return [...prev, addon];
       }
     });
   };
 
-  const updateRiceQty = (id, delta) => {
-    setSelectedRice((prev) => {
-      return prev.map((x) => {
-        if (x.id === id) {
-          const newQty = Math.max(1, (x.qty || 1) + delta);
-          return { ...x, qty: newQty };
-        }
-        return x;
-      });
-    });
-  };
 
   const toggleExtra = (id) => {
     const addon = grouped.extra.find((e) => e.id === id);
@@ -264,11 +263,16 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
     setSelectedExtras((prev) => {
       return prev.map((x) => {
         if (x.id === id) {
-          const newQty = Math.max(1, (x.qty || 1) + delta);
+          const currentQty = x.qty || 1;
+          const newQty = currentQty + delta;
+          // If quantity would go below 1, remove the add-on instead
+          if (newQty < 1) {
+            return null; // Mark for removal
+          }
           return { ...x, qty: newQty };
         }
         return x;
-      });
+      }).filter(Boolean); // Remove null entries
     });
   };
 
@@ -312,30 +316,65 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
           <TouchableOpacity onPress={onClose} style={[
             styles.closeHeaderBtn,
             {
-              backgroundColor: theme.colors.error,
-              borderRadius: borderRadius.round,
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
             }
           ]} activeOpacity={0.7}>
-            <Text style={[
-              styles.closeHeaderText,
-              {
-                color: theme.colors.onError,
-              }
-            ]}>✕</Text>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: hexToRgba(theme.colors.error, 0.1), // Soft 10% opacity halo
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.error + '40',
+                  padding: spacing.sm,
+                  borderRadius: 999, // Perfect circle
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="close"
+                  library="ionicons"
+                  size={20}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </TouchableOpacity>
         </View>
-        <ScrollView 
-          style={{ flex: 1 }} 
+        <KeyboardAwareScrollView
+          enableOnAndroid={true}
+          extraScrollHeight={100}
+          keyboardShouldPersistTaps="handled"
+          style={{ flex: 1 }}
           contentContainerStyle={[
             styles.scrollContent,
             {
               padding: spacing.lg,
-              paddingBottom: spacing.xxl + 200, // Extra padding to ensure special instructions is accessible
+              paddingBottom: spacing.xxl + 300, // Extra padding to ensure special instructions is fully accessible above footer
             }
           ]} 
           showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
+          enableResetScrollToCoords={false}
+          scrollEnabled={true}
         >
           {/* Size Selection - Only for snacks and drinks (not softdrinks) */}
           {showSizeSelection && (
@@ -411,6 +450,8 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
                   library="ionicons"
                   size={24}
                   color={theme.colors.primary}
+                  responsive={true}
+                  hitArea={false}
                 />
               </AnimatedButton>
               <View style={[
@@ -453,6 +494,8 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
                   library="ionicons"
                   size={24}
                   color={theme.colors.primary}
+                  responsive={true}
+                  hitArea={false}
                 />
               </AnimatedButton>
             </View>
@@ -471,88 +514,18 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
               ]}>Rice</Text>
               {grouped.rice.map((a) => {
                 const selected = selectedRice.find((x) => x.id === a.id);
-                const qty = selected?.qty || 0;
                 return (
-                  <View key={a.id} style={{ marginBottom: spacing.sm }}>
-                    <SelectableRow 
-                      label={a.name} 
-                      price={a.price} 
-                      selected={qty > 0} 
-                      onPress={() => toggleRice(a.id)}
-                      theme={theme}
-                      spacing={spacing}
-                      borderRadius={borderRadius}
-                      typography={typography}
-                    />
-                    {qty > 0 && (
-                      <View style={[styles.qtyRow, { marginTop: spacing.xs, gap: spacing.md, justifyContent: 'center' }]}>
-                        <AnimatedButton
-                          style={[
-                            styles.qtyBtnSmall,
-                            {
-                              backgroundColor: theme.colors.primaryContainer,
-                              borderRadius: borderRadius.round,
-                              width: 36,
-                              height: 36,
-                              borderWidth: 1.5,
-                              borderColor: theme.colors.primary + '40',
-                            }
-                          ]}
-                          onPress={() => updateRiceQty(a.id, -1)}
-                        >
-                          <Icon
-                            name="remove"
-                            library="ionicons"
-                            size={18}
-                            color={theme.colors.primary}
-                          />
-                        </AnimatedButton>
-                        <View style={[
-                          styles.qtyDisplaySmall,
-                          {
-                            backgroundColor: theme.colors.primaryContainer,
-                            borderRadius: borderRadius.md,
-                            borderWidth: 1.5,
-                            borderColor: theme.colors.primary + '40',
-                            minWidth: 40,
-                            paddingHorizontal: spacing.sm,
-                            paddingVertical: spacing.xs,
-                          }
-                        ]}>
-                          <Text style={[
-                            styles.qtyTextSmall,
-                            {
-                              color: theme.colors.primary,
-                              ...typography.bodyBold,
-                              fontWeight: '800',
-                              textAlign: 'center',
-                            }
-                          ]}>{qty}</Text>
-                        </View>
-                        <AnimatedButton
-                          style={[
-                            styles.qtyBtnSmall,
-                            {
-                              backgroundColor: theme.colors.primaryContainer,
-                              borderRadius: borderRadius.round,
-                              width: 36,
-                              height: 36,
-                              borderWidth: 1.5,
-                              borderColor: theme.colors.primary + '40',
-                            }
-                          ]}
-                          onPress={() => updateRiceQty(a.id, 1)}
-                        >
-                          <Icon
-                            name="add"
-                            library="ionicons"
-                            size={18}
-                            color={theme.colors.primary}
-                          />
-                        </AnimatedButton>
-                      </View>
-                    )}
-                  </View>
+                  <SelectableRow 
+                    key={a.id}
+                    label={a.name} 
+                    price={a.price} 
+                    selected={!!selected} 
+                    onPress={() => toggleRice(a.id)}
+                    theme={theme}
+                    spacing={spacing}
+                    borderRadius={borderRadius}
+                    typography={typography}
+                  />
                 );
               })}
             </View>
@@ -630,6 +603,8 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
                             library="ionicons"
                             size={18}
                             color={theme.colors.primary}
+                            responsive={true}
+                            hitArea={false}
                           />
                         </AnimatedButton>
                         <View style={[
@@ -673,6 +648,8 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
                             library="ionicons"
                             size={18}
                             color={theme.colors.primary}
+                            responsive={true}
+                            hitArea={false}
                           />
                         </AnimatedButton>
                       </View>
@@ -732,7 +709,7 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
               ]}>No customization options available for soft drinks.</Text>
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View style={[
           styles.footer,
@@ -740,6 +717,7 @@ export default function ItemCustomizationModal({ visible, onClose, item, onConfi
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.border,
             padding: spacing.lg,
+            paddingBottom: spacing.lg + 20, // Extra bottom padding for safe area
             borderTopWidth: 1.5,
           }
         ]}>

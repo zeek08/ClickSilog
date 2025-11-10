@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { scale } from '../../utils/responsive';
 import ItemCustomizationModal from './ItemCustomizationModal';
 import Icon from './Icon';
 import AnimatedButton from './AnimatedButton';
@@ -13,7 +14,7 @@ const MenuItemCard = ({ item }) => {
   const { theme, spacing, borderRadius, typography, themeMode } = useTheme();
   const { addToCart, calculateTotalPrice, items, removeFromCart, updateQty } = useCart();
   const [open, setOpen] = useState(false);
-  const scale = useSharedValue(1);
+  const scaleAnim = useSharedValue(1);
   
   // Check if item is already in cart (by id only, not considering add-ons)
   const cartItem = items.find(cartItem => cartItem.id === item.id);
@@ -51,12 +52,12 @@ const MenuItemCard = ({ item }) => {
   };
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scaleAnim.value }],
   }));
 
   const handlePress = () => {
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 }, () => {
-      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scaleAnim.value = withSpring(0.98, { damping: 15, stiffness: 300 }, () => {
+      scaleAnim.value = withSpring(1, { damping: 15, stiffness: 300 });
     });
     setOpen(true);
   };
@@ -103,6 +104,7 @@ const MenuItemCard = ({ item }) => {
               name={categoryIcon.name}
               library={categoryIcon.library}
               size={48}
+              responsive={false}
                 color={
                   (item.category || item.categoryId) === 'snacks' || (item.category || item.categoryId) === 'snack'
                     ? theme.colors.secondary || '#7C3AED' // Purple for snacks
@@ -289,4 +291,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MenuItemCard;
+export default memo(MenuItemCard);

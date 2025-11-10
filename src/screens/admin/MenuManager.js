@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, Modal, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
@@ -14,6 +16,7 @@ import ConfirmationModal from '../../components/ui/ConfirmationModal';
 import CategoryFilter from '../../components/ui/CategoryFilter';
 
 const MenuManager = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [menu, setMenu] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -246,7 +249,7 @@ const MenuManager = ({ navigation }) => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -302,15 +305,20 @@ const MenuManager = ({ navigation }) => {
           styles.addButton,
           {
             backgroundColor: theme.colors.primary,
-            borderRadius: borderRadius.lg,
-            paddingVertical: spacing.md,
+            borderRadius: borderRadius.md,
+            paddingVertical: spacing.sm + spacing.xs,
+            paddingHorizontal: spacing.md,
             margin: spacing.md,
             marginBottom: spacing.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: spacing.sm,
+            gap: spacing.xs,
             shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 1,
           }
         ]}
         onPress={openAdd}
@@ -318,14 +326,17 @@ const MenuManager = ({ navigation }) => {
         <Icon
           name="add"
           library="ionicons"
-          size={24}
+          size={18}
           color={theme.colors.onPrimary}
+          responsive={false}
+          hitArea={false}
         />
         <Text style={[
           styles.addButtonText,
           {
             color: theme.colors.onPrimary,
-            ...typography.bodyBold,
+            fontSize: 14,
+            fontWeight: '600',
           }
         ]}>
           Add Menu Item
@@ -485,27 +496,31 @@ const MenuManager = ({ navigation }) => {
                   {
                     backgroundColor: item.available ? theme.colors.successLight : theme.colors.surfaceVariant,
                     borderColor: item.available ? theme.colors.success : theme.colors.border,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.xs,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 1.5,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: 3,
+                    paddingHorizontal: spacing.xs + 2,
+                    borderWidth: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: spacing.xs,
+                    justifyContent: 'center',
                     opacity: item.available ? 1 : 0.5,
                   }
                 ]}>
                   <Icon
                     name={item.available ? 'checkmark-circle' : 'close-circle'}
                     library="ionicons"
-                    size={14}
+                    size={10}
                     color={item.available ? theme.colors.success : theme.colors.textSecondary}
+                    responsive={false}
+                    hitArea={false}
+                    style={{ marginRight: spacing.xs / 2 }}
                   />
                   <Text style={[
                     styles.statusText,
                     {
                       color: item.available ? theme.colors.success : theme.colors.textSecondary,
-                      ...typography.captionBold,
+                      fontSize: 11,
+                      fontWeight: '600',
                     }
                   ]}>
                     {item.available ? 'Active' : 'Disabled'}
@@ -527,29 +542,38 @@ const MenuManager = ({ navigation }) => {
                 styles.categoryBadge,
                 {
                   backgroundColor: theme.colors.surfaceVariant,
-                  borderRadius: borderRadius.md,
-                  paddingVertical: spacing.xs,
-                  paddingHorizontal: spacing.sm,
+                  borderRadius: borderRadius.sm,
+                  paddingVertical: 3,
+                  paddingHorizontal: spacing.xs + 2,
                   alignSelf: 'flex-start',
                   marginBottom: spacing.sm,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: spacing.xs,
+                  flexShrink: 0,
                 }
               ]}>
                 <Icon
                   name="folder"
                   library="ionicons"
-                  size={14}
+                  size={10}
                   color={theme.colors.textSecondary}
+                  responsive={false}
+                  hitArea={false}
+                  style={{ marginRight: spacing.xs / 2, flexShrink: 0 }}
                 />
-                <Text style={[
-                  styles.itemCategory,
-                  {
-                    color: theme.colors.textSecondary,
-                    ...typography.caption,
-                  }
-                ]}>
+                <Text 
+                  style={[
+                    styles.itemCategory,
+                    {
+                      color: theme.colors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: '500',
+                      flexShrink: 0,
+                    }
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {getCategoryName(item.category || item.categoryId)}
                 </Text>
               </View>
@@ -560,9 +584,8 @@ const MenuManager = ({ navigation }) => {
                 borderTopColor: theme.colors.border,
                 borderTopWidth: 1,
                 marginTop: spacing.md,
-                paddingTop: spacing.md,
+                paddingTop: spacing.sm,
                 flexDirection: 'row',
-                gap: spacing.sm,
               }
             ]}>
               <AnimatedButton
@@ -570,11 +593,16 @@ const MenuManager = ({ navigation }) => {
                   styles.editBtn,
                   {
                     backgroundColor: theme.colors.primary,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.md,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: spacing.xs + 1,
+                    paddingHorizontal: spacing.sm,
                     flex: 1,
+                    marginRight: spacing.xs,
                     shadowColor: theme.colors.primary,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                    elevation: 1,
                   }
                 ]}
                 onPress={() => openEdit(item)}
@@ -582,15 +610,18 @@ const MenuManager = ({ navigation }) => {
                 <Icon
                   name="create"
                   library="ionicons"
-                  size={16}
+                  size={14}
                   color={theme.colors.onPrimary}
-                  style={{ marginRight: spacing.xs }}
+                  responsive={false}
+                  hitArea={false}
+                  style={{ marginRight: 4 }}
                 />
                 <Text style={[
                   styles.editBtnText,
                   {
                     color: theme.colors.onPrimary,
-                    ...typography.captionBold,
+                    fontSize: 12,
+                    fontWeight: '600',
                   }
                 ]}>
                   Edit
@@ -600,29 +631,34 @@ const MenuManager = ({ navigation }) => {
                 style={[
                   styles.disableBtn,
                   {
-                    backgroundColor: theme.colors.warning,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.md,
+                    backgroundColor: item.available ? theme.colors.surfaceVariant : theme.colors.success,
+                    borderColor: item.available ? theme.colors.border : theme.colors.success,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: spacing.xs + 1,
+                    paddingHorizontal: spacing.sm,
                     flex: 1,
-                    shadowColor: theme.colors.warning,
+                    marginRight: spacing.xs,
+                    borderWidth: 1,
                   }
                 ]}
-                onPress={() => toggle(item)}
+                onPress={() => toggleAvailable(item)}
               >
                 <Icon
                   name={item.available ? 'eye-off' : 'eye'}
                   library="ionicons"
-                  size={16}
-                  color="#FFFFFF"
-                  style={{ marginRight: spacing.xs }}
+                  size={14}
+                  color={item.available ? theme.colors.textSecondary : theme.colors.onPrimary}
+                  responsive={false}
+                  hitArea={false}
+                  style={{ marginRight: 4 }}
                 />
                 <Text 
                   style={[
                     styles.disableBtnText,
                     {
-                      color: '#FFFFFF',
-                      ...typography.captionBold,
+                      color: item.available ? theme.colors.textSecondary : theme.colors.onPrimary,
+                      fontSize: 12,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
@@ -635,11 +671,15 @@ const MenuManager = ({ navigation }) => {
                   styles.deleteBtn,
                   {
                     backgroundColor: theme.colors.error,
-                    borderRadius: borderRadius.md,
-                    paddingVertical: spacing.sm + 2, // Increased padding to accommodate descenders
-                    paddingHorizontal: spacing.md,
+                    borderRadius: borderRadius.sm,
+                    paddingVertical: spacing.xs + 1,
+                    paddingHorizontal: spacing.sm,
                     flex: 1,
                     shadowColor: theme.colors.error,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                    elevation: 1,
                   }
                 ]}
                 onPress={() => remove(item)}
@@ -647,18 +687,18 @@ const MenuManager = ({ navigation }) => {
                 <Icon
                   name="trash"
                   library="ionicons"
-                  size={16}
+                  size={14}
                   color="#FFFFFF"
-                  style={{ marginRight: spacing.xs }}
+                  responsive={false}
+                  hitArea={false}
+                  style={{ marginRight: 4 }}
                 />
                 <Text style={[
                   styles.deleteBtnText,
                   {
                     color: '#FFFFFF',
-                    fontSize: 13, // Reduced from captionBold (14) to prevent clipping
-                    lineHeight: 18, // Increased line height for better vertical spacing
+                    fontSize: 12,
                     fontWeight: '600',
-                    letterSpacing: 0.2,
                   }
                 ]}>
                   Delete
@@ -723,7 +763,10 @@ const MenuManager = ({ navigation }) => {
               />
             </AnimatedButton>
           </View>
-          <ScrollView 
+          <KeyboardAwareScrollView
+            enableOnAndroid={true}
+            extraScrollHeight={80}
+            keyboardShouldPersistTaps="handled"
             style={[
               styles.modalContent,
               {
@@ -734,7 +777,6 @@ const MenuManager = ({ navigation }) => {
               padding: spacing.lg,
             }}
             showsVerticalScrollIndicator={true}
-            keyboardShouldPersistTaps="handled"
           >
             <Text style={[
               styles.label,
@@ -904,16 +946,16 @@ const MenuManager = ({ navigation }) => {
             ]}>
               Category
             </Text>
-            <View style={[
-              styles.categorySelector,
-              {
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: spacing.sm }}
+              contentContainerStyle={{
                 flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: spacing.sm,
-                marginTop: spacing.sm,
-              }
-            ]}>
-              {categories.map((c) => (
+                paddingRight: spacing.md,
+              }}
+            >
+              {categories.map((c, index) => (
                 <AnimatedButton
                   key={c.id}
                   style={[
@@ -925,34 +967,39 @@ const MenuManager = ({ navigation }) => {
                       paddingVertical: spacing.sm,
                       paddingHorizontal: spacing.md,
                       borderWidth: 2,
+                      marginRight: index < categories.length - 1 ? spacing.sm : 0,
+                      flexShrink: 0,
                     }
                   ]}
                   onPress={() => setForm((f) => ({ ...f, category: c.id }))}
                 >
-                  <Text style={[
-                    styles.categoryChipText,
-                    {
-                      color: form.category === c.id ? theme.colors.primary : theme.colors.textSecondary,
-                      ...typography.captionBold,
-                    }
-                  ]}>
+                  <Text 
+                    style={[
+                      styles.categoryChipText,
+                      {
+                        color: form.category === c.id ? theme.colors.primary : theme.colors.textSecondary,
+                        ...typography.captionBold,
+                      }
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {c.name}
                   </Text>
                 </AnimatedButton>
               ))}
-            </View>
+            </ScrollView>
             <AnimatedButton
               style={[
                 styles.saveBtn,
                 {
                   backgroundColor: theme.colors.primary,
-                  borderRadius: borderRadius.lg,
-                  paddingVertical: spacing.lg,
-                  marginTop: spacing.xl,
+                  borderRadius: borderRadius.md,
+                  paddingVertical: spacing.sm + 2,
+                  marginTop: spacing.lg,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: spacing.sm,
                   shadowColor: theme.colors.primary,
                   opacity: uploading ? 0.6 : 1,
                 }
@@ -966,21 +1013,25 @@ const MenuManager = ({ navigation }) => {
                 <Icon
                   name="save"
                   library="ionicons"
-                  size={22}
+                  size={18}
                   color={theme.colors.onPrimary}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.xs }}
                 />
               )}
               <Text style={[
                 styles.saveBtnText,
                 {
                   color: theme.colors.onPrimary,
-                  ...typography.bodyBold,
+                  fontSize: 14,
+                  fontWeight: '600',
                 }
               ]}>
                 {uploading ? 'Saving...' : 'Save'}
               </Text>
             </AnimatedButton>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 
@@ -1111,7 +1162,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 3,
-    minWidth: 80,
   },
   disableBtnText: {
     // Typography handled via theme

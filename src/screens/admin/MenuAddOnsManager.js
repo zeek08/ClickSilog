@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import Icon from '../../components/ui/Icon';
@@ -7,6 +8,7 @@ import AnimatedButton from '../../components/ui/AnimatedButton';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 
 const MenuAddOnsManager = () => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [menu, setMenu] = useState([]);
   const [addOns, setAddOns] = useState([]);
@@ -85,7 +87,7 @@ const MenuAddOnsManager = () => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }

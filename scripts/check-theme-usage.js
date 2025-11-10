@@ -88,9 +88,12 @@ function scanFile(filePath) {
     }
 
     // Check for unsafe spacing usage (but allow prop passing and context access)
+    // Allow JSX prop assignments like spacing="xs" or spacing={'xs'}
     if (/(?:^|[^a-zA-Z_.])spacing\s*[=:]/.test(line) && 
         !/useTheme|theme\.spacing|themeContext\.spacing|lightTheme\.spacing|darkTheme\.spacing|currentTheme\.spacing/.test(line) &&
-        !/spacing=\{spacing\}/.test(line)) {
+        !/spacing=\{spacing\}/.test(line) &&
+        !/spacing=["'](xs|sm|md|lg|xl|xxl)["']/.test(line) &&
+        !/spacing=\{["'](xs|sm|md|lg|xl|xxl)["']\}/.test(line)) {
       issues.push({
         file: filePath,
         line: lineNum,

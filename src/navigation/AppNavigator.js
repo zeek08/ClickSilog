@@ -3,6 +3,7 @@ import { BackHandler, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthContext } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import CustomerStack from './CustomerStack';
 import KitchenStack from './KitchenStack';
 import CashierStack from './CashierStack';
@@ -18,6 +19,7 @@ const RootStack = createStackNavigator();
 const AppNavigator = () => {
   const authContext = useContext(AuthContext);
   const navigationRef = useRef(null);
+  const { theme } = useTheme();
 
   // Safely destructure with defaults
   const userRole = authContext?.userRole || null;
@@ -26,8 +28,8 @@ const AppNavigator = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAFA' }}>
-        <ActivityIndicator size="large" color="#FFD54F" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme?.colors?.background || '#FAFAFA' }}>
+        <ActivityIndicator size="large" color={theme?.colors?.primary || '#FFD54F'} />
       </View>
     );
   }
@@ -57,23 +59,36 @@ const AppNavigator = () => {
   };
 
   return (
-    <NavigationContainer
-      key={`${userRole || 'default'}-${isAuthenticated ? 'auth' : 'noauth'}`}
-      ref={(ref) => {
-        navigationRef.current = ref;
-        if (ref) {
-          global.navigationRef = ref;
-        }
-      }}
-    >
-      <RootStack.Navigator 
-        screenOptions={{ 
-          headerShown: false,
-          gestureEnabled: true,
-          gestureDirection: 'horizontal'
-        }} 
-        initialRouteName={getInitialRoute()}
+    <View style={{ flex: 1, backgroundColor: theme?.colors?.background || '#FAFAFA' }}>
+      <NavigationContainer
+        key={`${userRole || 'default'}-${isAuthenticated ? 'auth' : 'noauth'}`}
+        ref={(ref) => {
+          navigationRef.current = ref;
+          if (ref) {
+            global.navigationRef = ref;
+          }
+        }}
+        theme={{
+          dark: false,
+          colors: {
+            primary: theme?.colors?.primary || '#FFD54F',
+            background: theme?.colors?.background || '#FAFAFA',
+            card: theme?.colors?.surface || '#FFFFFF',
+            text: theme?.colors?.text || '#1E1E1E',
+            border: theme?.colors?.border || '#E0E0E0',
+            notification: theme?.colors?.primary || '#FFD54F',
+          },
+        }}
       >
+        <RootStack.Navigator 
+          screenOptions={{ 
+            headerShown: false,
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
+            cardStyle: { backgroundColor: theme?.colors?.background || '#FAFAFA' },
+          }} 
+          initialRouteName={getInitialRoute()}
+        >
         {/* Home screen for role selection - always available */}
           <RootStack.Screen 
             name="Home" 
@@ -120,8 +135,9 @@ const AppNavigator = () => {
           }}
         />
         )}
-      </RootStack.Navigator>
-    </NavigationContainer>
+        </RootStack.Navigator>
+      </NavigationContainer>
+    </View>
   );
 };
 

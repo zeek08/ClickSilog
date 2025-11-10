@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Modal, StyleSheet, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import { appConfig } from '../../config/appConfig';
 import { alertService } from '../../services/alertService';
 import { verifyPassword } from '../../utils/passwordHash';
+import { 
+  checkMaxAttempts, 
+  incrementAttemptCounter, 
+  resetAttemptCounter, 
+  isLockedOut,
+  setLockout,
+  logSecurityEvent,
+} from '../../utils/paymentSecurity';
 import AnimatedButton from './AnimatedButton';
 import Icon from './Icon';
 
@@ -13,13 +21,33 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
   const [password, setPassword] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [paymentPassword, setPaymentPassword] = useState(null);
+  const [attemptInfo, setAttemptInfo] = useState({ remainingAttempts: 5, locked: false });
+  const [lockoutInfo, setLockoutInfo] = useState(null);
+  const passwordInputRef = useRef(null);
 
-  // Load payment confirmation password from settings
+  // Load payment confirmation password from settings and check lockout
   useEffect(() => {
     if (visible) {
       loadPaymentPassword();
+      checkLockoutStatus();
+    } else {
+      // Reset password when modal closes
+      setPassword('');
     }
   }, [visible]);
+
+  // Check lockout status
+  const checkLockoutStatus = async () => {
+    const lockout = await isLockedOut();
+    if (lockout.locked) {
+      setLockoutInfo({ remainingMinutes: lockout.remainingMinutes });
+      setAttemptInfo({ locked: true, remainingAttempts: 0 });
+    } else {
+      const attempts = await checkMaxAttempts();
+      setAttemptInfo(attempts);
+      setLockoutInfo(null);
+    }
+  };
 
   const loadPaymentPassword = async () => {
     try {
@@ -42,14 +70,39 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
       return;
     }
 
+    // Check lockout status
+    const lockout = await isLockedOut();
+    if (lockout.locked) {
+      alertService.error(
+        'Account Locked', 
+        `Too many failed attempts. Please try again in ${lockout.remainingMinutes} minute(s).`
+      );
+      setPassword('');
+      return;
+    }
+
+    // Check max attempts
+    const attempts = await checkMaxAttempts();
+    if (attempts.maxAttemptsReached && attempts.locked) {
+      alertService.error(
+        'Account Locked', 
+        `Too many failed attempts. Please try again in ${attempts.remainingMinutes} minute(s).`
+      );
+      setPassword('');
+      await checkLockoutStatus();
+      return;
+    }
+
     setVerifying(true);
+    const enteredPassword = password.trim();
+    
     try {
       let isValid = false;
 
       // Check if payment password is configured
       if (paymentPassword) {
         // Verify against configured payment password (supports both hashed and plain text)
-        isValid = verifyPassword(password.trim(), paymentPassword);
+        isValid = verifyPassword(enteredPassword, paymentPassword);
       } else {
         // Fallback: Check against Firestore users with staff roles (backward compatibility)
         if (appConfig.USE_MOCKS) {
@@ -60,7 +113,7 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
           isValid = users.some(user => {
             const isStaff = ['admin', 'cashier', 'kitchen', 'developer'].includes(user.role);
             if (!isStaff) return false;
-            return verifyPassword(password.trim(), user.password);
+            return verifyPassword(enteredPassword, user.password);
           });
         } else {
           // In production, check against Firestore users with staff roles
@@ -75,7 +128,7 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
             
             // Verify password (supports both hashed and plain text)
             // verifyPassword handles both cases automatically
-            const passwordMatches = verifyPassword(password.trim(), user.password);
+            const passwordMatches = verifyPassword(enteredPassword, user.password);
             
             return passwordMatches;
           });
@@ -83,15 +136,62 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
       }
 
       if (isValid) {
+        // Password verified - reset attempts and log success
+        await resetAttemptCounter();
+        await logSecurityEvent('payment_password_success', {
+          orderId: orderData?.id,
+          total,
+        });
+        
         // Password verified - place the order
         await onConfirm();
         setPassword('');
         onClose();
       } else {
-        alertService.error('Invalid Password', 'The password you entered is incorrect. Please try again.');
+        // Increment attempt counter
+        const newAttemptCount = await incrementAttemptCounter();
+        const remainingAttempts = 5 - newAttemptCount;
+        
+        // Log failed attempt (without password)
+        await logSecurityEvent('payment_password_failure', {
+          orderId: orderData?.id,
+          attemptCount: newAttemptCount,
+          remainingAttempts,
+        });
+
+        // Check if max attempts reached
+        const maxAttemptsCheck = await checkMaxAttempts();
+        if (maxAttemptsCheck.maxAttemptsReached) {
+          // Set lockout if not already locked
+          if (!maxAttemptsCheck.locked) {
+            await setLockout();
+          }
+          const lockout = await isLockedOut();
+          if (lockout.locked) {
+            setLockoutInfo({ remainingMinutes: lockout.remainingMinutes });
+            alertService.error(
+              'Account Locked', 
+              `Too many failed attempts. Please try again in ${lockout.remainingMinutes} minute(s).`
+            );
+          }
+        } else {
+          alertService.error(
+            'Invalid Password', 
+            `The password you entered is incorrect. ${remainingAttempts} attempt(s) remaining.`
+          );
+        }
+        
         setPassword('');
+        await checkLockoutStatus();
       }
     } catch (error) {
+      // Log error (without password)
+      await logSecurityEvent('payment_password_error', {
+        orderId: orderData?.id,
+        error: error.message,
+      });
+      
+      // Never log password in error messages
       console.error('Password verification error:', error);
       alertService.error('Error', 'Failed to verify password. Please try again.');
     } finally {
@@ -208,9 +308,34 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
                 marginBottom: spacing.sm,
               }
             ]}>
-              Staff Password
+              Payment Confirmation Password
             </Text>
+            {lockoutInfo && (
+              <Text style={[
+                styles.lockoutWarning,
+                {
+                  color: theme.colors.error,
+                  ...typography.caption,
+                  marginBottom: spacing.sm,
+                }
+              ]}>
+                Account locked. Please try again in {lockoutInfo.remainingMinutes} minute(s).
+              </Text>
+            )}
+            {!lockoutInfo && attemptInfo.remainingAttempts < 5 && (
+              <Text style={[
+                styles.attemptWarning,
+                {
+                  color: theme.colors.warning || theme.colors.primary,
+                  ...typography.caption,
+                  marginBottom: spacing.sm,
+                }
+              ]}>
+                {attemptInfo.remainingAttempts} attempt(s) remaining
+              </Text>
+            )}
             <TextInput
+              ref={passwordInputRef}
               style={[
                 styles.passwordInput,
                 {
@@ -222,13 +347,45 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
                   ...typography.body,
                 }
               ]}
-              placeholder="Enter staff password"
+              placeholder="Enter payment confirmation password"
               placeholderTextColor={theme.colors.textSecondary}
               value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoFocus
-              editable={!verifying}
+              onChangeText={(text) => {
+                // Immediately mask the input - no delay
+                setPassword(text);
+              }}
+              secureTextEntry={true}
+              autoFocus={true}
+              editable={!verifying && !attemptInfo.locked}
+              autoCorrect={false}
+              autoCapitalize="none"
+              spellCheck={false}
+              autoComplete="off"
+              textContentType="password"
+              passwordRules="required: upper; required: lower; required: digit; minlength: 8;"
+              keyboardType="default"
+              returnKeyType="done"
+              onSubmitEditing={handleVerifyPassword}
+              accessibilityLabel="Payment confirmation password"
+              accessibilityHint="Enter payment confirmation password"
+              accessibilityRole="none"
+              accessibilityState={{ disabled: verifying || attemptInfo.locked }}
+              // Prevent copy/paste and ensure immediate masking
+              onSelectionChange={() => {
+                // Clear selection to prevent copy
+                if (passwordInputRef.current) {
+                  passwordInputRef.current.setNativeProps({ 
+                    selection: { start: password.length, end: password.length },
+                    secureTextEntry: true 
+                  });
+                }
+              }}
+              onFocus={() => {
+                // Ensure secureTextEntry is always true on focus
+                if (passwordInputRef.current) {
+                  passwordInputRef.current.setNativeProps({ secureTextEntry: true });
+                }
+              }}
             />
           </View>
 
@@ -249,15 +406,25 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
               onPress={handleCancel}
               disabled={verifying}
             >
-              <Text style={[
-                styles.cancelButtonText,
-                {
-                  color: theme.colors.text,
-                  ...typography.button,
-                }
-              ]}>
-                Cancel
-              </Text>
+              <View style={[styles.cancelButtonContent, { gap: spacing.sm }]}>
+                <Icon
+                  name="close-circle"
+                  library="ionicons"
+                  size={20}
+                  color={theme.colors.text}
+                  responsive={true}
+                  hitArea={false}
+                />
+                <Text style={[
+                  styles.cancelButtonText,
+                  {
+                    color: theme.colors.text,
+                    ...typography.button,
+                  }
+                ]}>
+                  Cancel
+                </Text>
+              </View>
             </AnimatedButton>
 
             <AnimatedButton
@@ -271,7 +438,7 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
                 }
               ]}
               onPress={handleVerifyPassword}
-              disabled={verifying || !password.trim()}
+              disabled={verifying || !password.trim() || attemptInfo.locked}
             >
               {verifying ? (
                 <ActivityIndicator color={theme.colors.onPrimary} size="small" />
@@ -282,6 +449,8 @@ const CashPaymentConfirmationModal = ({ visible, onClose, onConfirm, orderData, 
                     library="ionicons"
                     size={20}
                     color={theme.colors.onPrimary}
+                    responsive={true}
+                    hitArea={false}
                   />
                   <Text style={[
                     styles.confirmButtonText,
@@ -355,6 +524,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    // Prevent text selection on Android
+    ...(Platform.OS === 'android' && {
+      textAlignVertical: 'center',
+    }),
+  },
+  lockoutWarning: {
+    fontWeight: '600',
+  },
+  attemptWarning: {
+    fontWeight: '600',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -363,6 +542,11 @@ const styles = StyleSheet.create({
   cancelButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cancelButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // gap handled inline with theme spacing
   },
   cancelButtonText: {
     fontWeight: 'bold',

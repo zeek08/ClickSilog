@@ -43,16 +43,22 @@ const ThemeToggle = ({ style }) => {
       >
         <View
           style={{
-            backgroundColor: hexToRgba(theme.colors.secondary || '#7C3AED', 0.1), // Purple for theme toggle
+            backgroundColor: themeMode === 'dark' 
+              ? hexToRgba(theme.colors.warning || '#FFB300', 0.15)
+              : hexToRgba(theme.colors.secondary || '#7C3AED', 0.1),
             borderWidth: 1.5,
-            borderColor: (theme.colors.secondary || '#7C3AED') + '40',
+            borderColor: themeMode === 'dark'
+              ? (theme.colors.warning || '#FFB300') + '50'
+              : (theme.colors.secondary || '#7C3AED') + '40',
             padding: spacing.sm,
             borderRadius: 999, // Perfect circle
             justifyContent: 'center',
             alignItems: 'center',
-            shadowColor: theme.colors.secondary || '#7C3AED',
+            shadowColor: themeMode === 'dark'
+              ? theme.colors.warning || '#FFB300'
+              : theme.colors.secondary || '#7C3AED',
             shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
+            shadowOpacity: themeMode === 'dark' ? 0.25 : 0.2,
             shadowRadius: 4,
             elevation: 3,
           }}
@@ -60,8 +66,10 @@ const ThemeToggle = ({ style }) => {
           <Icon
             name={themeMode === 'dark' ? 'sunny' : 'moon'}
             library="ionicons"
-            size={21}
-            color={theme.colors.secondary || '#7C3AED'}
+            size={22}
+            color={themeMode === 'dark' ? (theme.colors.warning || '#FFB300') : (theme.colors.secondary || '#7C3AED')}
+            responsive={true}
+            hitArea={false}
           />
         </View>
       </View>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { View, FlatList, StyleSheet, Text, ActivityIndicator, ScrollView, Dimensions, TouchableOpacity, BackHandler, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRealTimeCollection } from '../../hooks/useRealTime';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,6 +14,7 @@ import Icon from '../../components/ui/Icon';
 import AnimatedButton from '../../components/ui/AnimatedButton';
 import CustomerOrderNotification from '../../components/customer/CustomerOrderNotification';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
+import { scale } from '../../utils/responsive';
 
 // Helper function to convert hex color to rgba with opacity
 const hexToRgba = (hex, opacity) => {
@@ -28,6 +30,7 @@ const hexToRgba = (hex, opacity) => {
 
 const MenuScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { logout } = useContext(AuthContext);
   const { items } = useCart();
@@ -150,7 +153,7 @@ const MenuScreen = () => {
         { 
           backgroundColor: theme.colors.surface, 
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
           shadowColor: '#000',
@@ -199,6 +202,8 @@ const MenuScreen = () => {
             library="ionicons"
             size={22}
             color={theme.colors.error}
+            responsive={true}
+            hitArea={false}
           />
             </View>
           </View>
@@ -219,9 +224,11 @@ const MenuScreen = () => {
               <Icon
                 name="search"
                 library="ionicons"
-                size={20}
+                size={22}
                 color={theme.colors.textSecondary}
                 style={{ marginRight: spacing.sm }}
+                responsive={true}
+                hitArea={false}
               />
               <TextInput
                 value={search}
@@ -257,8 +264,9 @@ const MenuScreen = () => {
                 <Icon
                   name="close"
                   library="ionicons"
-                  size={18}
+                  size={20}
                   color={theme.colors.error}
+                  responsive={true}
                 />
               </AnimatedButton>
             </View>
@@ -301,8 +309,10 @@ const MenuScreen = () => {
                 <Icon
                   name="search"
                   library="ionicons"
-                  size={20}
-                      color={theme.colors.info || '#3B82F6'}
+                  size={22}
+                  color={theme.colors.info || '#3B82F6'}
+                  responsive={true}
+                  hitArea={false}
                 />
                   </View>
                 </View>
@@ -349,8 +359,10 @@ const MenuScreen = () => {
             <Icon
               name="cart"
               library="ionicons"
-                  size={22}
-                  color={theme.colors.success || '#10B981'}
+              size={22}
+              color={theme.colors.success || '#10B981'}
+              responsive={true}
+              hitArea={false}
             />
               </View>
             </View>
@@ -396,9 +408,9 @@ const MenuScreen = () => {
             What would you like to order?
           </Text>
           <View style={[styles.greetingIcons, { gap: spacing.sm }]}>
-            <Icon name="star" library="ionicons" size={20} color={theme.colors.primary} />
-            <Icon name="restaurant" library="ionicons" size={20} color={theme.colors.info || '#3B82F6'} />
-            <Icon name="sparkles" library="ionicons" size={20} color={theme.colors.secondary || '#7C3AED'} />
+            <Icon name="star" library="ionicons" size={20} color={theme.colors.primary} responsive={true} />
+            <Icon name="restaurant" library="ionicons" size={20} color={theme.colors.info || '#3B82F6'} responsive={true} />
+            <Icon name="sparkles" library="ionicons" size={20} color={theme.colors.secondary || '#7C3AED'} responsive={true} />
           </View>
         </View>
       </View>
@@ -460,6 +472,16 @@ const MenuScreen = () => {
                   contentContainerStyle={[styles.listContent, { padding: spacing.md, paddingBottom: spacing.xl }]}
                   columnWrapperStyle={styles.row}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  updateCellsBatchingPeriod={50}
+                  initialNumToRender={10}
+                  windowSize={10}
+                  getItemLayout={(data, index) => ({
+                    length: 200, // Approximate item height
+                    offset: 200 * Math.floor(index / 2),
+                    index,
+                  })}
                 />
               )}
             </View>

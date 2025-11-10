@@ -26,7 +26,7 @@ const ConfirmationModal = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { padding: spacing.md }]}>
         <View style={[
           styles.container,
           {
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    // padding will be set dynamically using theme.spacing
   },
   container: {
     width: '100%',

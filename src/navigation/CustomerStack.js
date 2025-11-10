@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import MenuScreen from '../screens/customer/MenuScreen';
 import CartScreen from '../screens/customer/CartScreen';
 import PaymentScreen from '../screens/customer/PaymentScreen';
+import GCashPaymentScreen from '../screens/customer/GCashPaymentScreen';
 import HeaderCartButton from '../components/ui/HeaderCartButton';
 import HeaderHomeButton from '../components/ui/HeaderHomeButton';
 
@@ -43,6 +44,13 @@ const CustomerStack = () => (
     <Stack.Screen 
       name="Payment" 
       component={PaymentScreen} 
+      options={{ 
+        headerShown: false
+      }} 
+    />
+    <Stack.Screen 
+      name="GCashPayment" 
+      component={GCashPaymentScreen} 
       options={{ 
         headerShown: false
       }} 

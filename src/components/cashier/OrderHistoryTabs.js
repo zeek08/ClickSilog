@@ -341,6 +341,11 @@ const OrderHistoryTabs = () => {
             paddingBottom: spacing.xxl,
           }
         ]}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
         ListEmptyComponent={
           <View style={[styles.empty, { padding: spacing.xxl }]}>
             <Icon

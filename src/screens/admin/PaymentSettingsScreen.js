@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { firestoreService } from '../../services/firestoreService';
 import { hashPassword } from '../../utils/passwordHash';
@@ -10,6 +11,7 @@ import AnimatedButton from '../../components/ui/AnimatedButton';
 
 const PaymentSettingsScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const [paymentPassword, setPaymentPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,7 +88,7 @@ const PaymentSettingsScreen = () => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, BackHandler, Vibration } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { orderService } from '../../services/orderService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -67,26 +68,30 @@ const StatusBadge = ({ status, theme, borderRadius, spacing, typography }) => {
       { 
         backgroundColor: s.bg, 
         borderColor: borderColor,
-        borderRadius: borderRadius.md,
-        borderWidth: status === 'preparing' ? 1.5 : 1.5,
-        paddingVertical: spacing.xs,
-        paddingHorizontal: spacing.sm,
+        borderRadius: borderRadius.sm,
+        borderWidth: 1,
+        paddingVertical: 3,
+        paddingHorizontal: spacing.xs + 2,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
+        justifyContent: 'center',
       }
     ]}>
       <Icon
         name={s.icon}
         library="ionicons"
-        size={14}
+        size={11}
         color={s.color}
+        responsive={false}
+        hitArea={false}
+        style={{ marginRight: spacing.xs / 2 }}
       />
       <Text style={[
         styles.badgeText, 
         { 
           color: s.color,
-          ...typography.captionBold,
+          fontSize: 11,
+          fontWeight: '600',
         }
       ]}>
         {s.label}
@@ -99,11 +104,26 @@ const timeAgoMinutes = (iso) => {
   if (!iso) return '';
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.max(0, Math.floor(diffMs / 60000));
+  const hours = Math.max(0, Math.floor(diffMs / 3600000));
+  const days = Math.max(0, Math.floor(diffMs / 86400000));
+  
+  // If days > 0, show days
+  if (days > 0) {
+    return `${days}d ago`;
+  }
+  
+  // If hours > 0 (or minutes > 59), show hours
+  if (hours > 0 || mins > 59) {
+    return `${hours}hr ago`;
+  }
+  
+  // Otherwise show minutes
   return `${mins}m ago`;
 };
 
 const KDSDashboard = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { logout } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
@@ -116,6 +136,7 @@ const KDSDashboard = () => {
   });
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [cancelOrderModal, setCancelOrderModal] = useState({ visible: false, order: null });
+  const [expandedItems, setExpandedItems] = useState({}); // Track expanded state for add-ons and notes
   const orderSubscriptionRef = useRef(null);
   const scrollRef = useRef(null);
   const { width } = Dimensions.get('window');
@@ -179,9 +200,12 @@ const KDSDashboard = () => {
       next: (newOrders) => {
         const currentOrderIds = new Set(newOrders.map(o => o.id));
         
-        // Check for new pending orders
+        // Check for new pending orders (only paid orders)
         const newPendingOrders = newOrders.filter(o => 
-          o.status === 'pending' && !lastOrderIdsRef.current.has(o.id)
+          o.status === 'pending' && 
+          (o.paymentStatus === 'paid' || (o.paymentMethod === 'cash' && !o.paymentStatus)) &&
+          o.status !== 'pending_payment' &&
+          !lastOrderIdsRef.current.has(o.id)
         );
         
         if (newPendingOrders.length > 0) {
@@ -230,11 +254,27 @@ const KDSDashboard = () => {
     setNewOrdersCount(0);
   };
 
-  const dataByStatus = useMemo(() => ({
-    pending: orders.filter((o) => o.status === 'pending'),
-    preparing: orders.filter((o) => o.status === 'preparing' || o.status === 'ready'),
-    all: orders // Show all orders including cancelled
-  }), [orders]);
+  const dataByStatus = useMemo(() => {
+    // CRITICAL: Only show orders that are paid (paymentStatus='paid')
+    // Do NOT show pending_payment orders - they are waiting for payment confirmation
+    // Kitchen should only see orders after payment is confirmed by backend webhook
+    const paidOrders = orders.filter((o) => {
+      // Order must have paymentStatus='paid' (confirmed by backend webhook)
+      const isPaid = o.paymentStatus === 'paid';
+      // Exclude pending_payment orders (waiting for payment)
+      const notPendingPayment = o.status !== 'pending_payment';
+      // Exclude cash orders that haven't been marked as paid yet (if applicable)
+      // For cash orders, they might not have paymentStatus set, so we allow them if status is not pending_payment
+      const isCashOrder = o.paymentMethod === 'cash' && !o.paymentStatus;
+      return (isPaid || isCashOrder) && notPendingPayment;
+    });
+    
+    return {
+      pending: paidOrders.filter((o) => o.status === 'pending'),
+      preparing: paidOrders.filter((o) => o.status === 'preparing' || o.status === 'ready'),
+      all: paidOrders // Show all paid orders including cancelled
+    };
+  }, [orders]);
 
   const startOrReady = async (order) => {
     // If pending, change to preparing (stays in pending tab)
@@ -339,7 +379,7 @@ const KDSDashboard = () => {
           paddingHorizontal: spacing.sm,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: spacing.xs,
+          justifyContent: 'center',
           marginBottom: spacing.md,
           alignSelf: 'flex-start',
         }
@@ -349,6 +389,9 @@ const KDSDashboard = () => {
           library="ionicons"
           size={14}
           color={theme.colors.textTertiary}
+          responsive={true}
+          hitArea={false}
+          style={{ marginRight: spacing.xs }}
         />
         <Text style={[
           styles.timeText, 
@@ -363,6 +406,16 @@ const KDSDashboard = () => {
       <View style={[styles.itemsBlock, { marginBottom: 0 }]}>
         {order.items?.map((i, idx) => {
           const isLastItem = idx === (order.items?.length || 0) - 1;
+          const addOnsKey = `${order.id}-${idx}-addons`;
+          const notesKey = `${order.id}-${idx}-notes`;
+          const isAddOnsExpanded = expandedItems[addOnsKey] || false;
+          const isNotesExpanded = expandedItems[notesKey] || false;
+          const addOnsText = i.addOns?.map((a) => a.name).join(', ') || '';
+          const notesText = i.specialInstructions || '';
+          // Always show expand button if there are add-ons or notes
+          const shouldShowAddOnsExpand = i.addOns?.length > 0;
+          const shouldShowNotesExpand = !!i.specialInstructions;
+          
           return (
           <View key={`${order.id}-item-${i.itemId || i.name || idx}-${idx}`} style={[
             styles.itemRow, 
@@ -392,7 +445,7 @@ const KDSDashboard = () => {
                 {i.quantity || i.qty}
               </Text>
             </View>
-            <View style={{ flex: 1, marginLeft: spacing.md }}>
+            <View style={{ flex: 1, marginLeft: spacing.md, minWidth: 0 }}>
               <Text style={[
                 styles.itemName, 
                 { 
@@ -414,22 +467,58 @@ const KDSDashboard = () => {
                     marginTop: spacing.xs,
                   }
                 ]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    alignItems: isAddOnsExpanded ? 'flex-start' : 'center',
+                    minWidth: 0,
+                  }}>
                     <Icon
                       name="add-circle"
                       library="ionicons"
                       size={12}
                       color={theme.colors.textSecondary}
+                      style={{ marginRight: spacing.xs, marginTop: isAddOnsExpanded ? 2 : 0, flexShrink: 0 }}
                     />
-                    <Text style={[
-                      styles.itemAddOns, 
-                      { 
-                        color: theme.colors.textSecondary,
-                        ...typography.caption,
-                      }
-                    ]} numberOfLines={1}>
-                      {i.addOns.map((a) => a.name).join(', ')}
+                    <Text 
+                      style={[
+                        styles.itemAddOns, 
+                        { 
+                          color: theme.colors.textSecondary,
+                          ...typography.caption,
+                          flex: 1,
+                          minWidth: 0,
+                        }
+                      ]} 
+                      numberOfLines={isAddOnsExpanded ? undefined : 1}
+                      ellipsizeMode={isAddOnsExpanded ? undefined : "tail"}
+                    >
+                      {addOnsText}
                     </Text>
+                    {shouldShowAddOnsExpand && (
+                      <AnimatedButton
+                        onPress={() => setExpandedItems(prev => ({ ...prev, [addOnsKey]: !isAddOnsExpanded }))}
+                        style={{
+                          marginLeft: spacing.xs,
+                          padding: spacing.xs,
+                          backgroundColor: 'transparent',
+                          minWidth: 24,
+                          minHeight: 24,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          alignSelf: isAddOnsExpanded ? 'flex-start' : 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon
+                          name={isAddOnsExpanded ? "chevron-up" : "chevron-down"}
+                          library="ionicons"
+                          size={16}
+                          color={theme.colors.textSecondary}
+                          responsive={true}
+                          hitArea={false}
+                        />
+                      </AnimatedButton>
+                    )}
                   </View>
                 </View>
               )}
@@ -444,27 +533,62 @@ const KDSDashboard = () => {
                     paddingHorizontal: spacing.sm,
                     marginTop: spacing.xs,
                     borderWidth: 1,
-                    flexDirection: 'row',
-                    gap: spacing.xs,
                   }
                 ]}>
-                  <Icon
-                    name="document-text"
-                    library="ionicons"
-                    size={14}
-                    color={theme.colors.warning}
-                  />
-                  <Text style={[
-                    styles.itemNotes, 
-                    { 
-                      color: theme.colors.warning,
-                      ...typography.caption,
-                      fontStyle: 'italic',
-                      flex: 1,
-                    }
-                  ]} numberOfLines={2}>
-                    {i.specialInstructions}
-                  </Text>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'flex-start',
+                    minWidth: 0,
+                  }}>
+                    <Icon
+                      name="document-text"
+                      library="ionicons"
+                      size={14}
+                      color={theme.colors.warning}
+                      style={{ marginRight: spacing.xs, marginTop: 2, flexShrink: 0 }}
+                    />
+                    <Text 
+                      style={[
+                        styles.itemNotes, 
+                        { 
+                          color: theme.colors.warning,
+                          ...typography.caption,
+                          fontStyle: 'italic',
+                          flex: 1,
+                          minWidth: 0,
+                        }
+                      ]} 
+                      numberOfLines={isNotesExpanded ? undefined : 2}
+                      ellipsizeMode={isNotesExpanded ? undefined : "tail"}
+                    >
+                      {notesText}
+                    </Text>
+                    {shouldShowNotesExpand && (
+                      <AnimatedButton
+                        onPress={() => setExpandedItems(prev => ({ ...prev, [notesKey]: !isNotesExpanded }))}
+                        style={{
+                          marginLeft: spacing.xs,
+                          padding: spacing.xs,
+                          backgroundColor: 'transparent',
+                          alignSelf: 'flex-start',
+                          minWidth: 24,
+                          minHeight: 24,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon
+                          name={isNotesExpanded ? "chevron-up" : "chevron-down"}
+                          library="ionicons"
+                          size={16}
+                          color={theme.colors.warning}
+                          responsive={true}
+                          hitArea={false}
+                        />
+                      </AnimatedButton>
+                    )}
+                  </View>
                 </View>
               )}
             </View>
@@ -494,10 +618,13 @@ const KDSDashboard = () => {
                     backgroundColor: theme.colors.errorLight,
                     borderColor: theme.colors.error,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 2,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
+                    borderWidth: 1.5,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }
                 ]} 
                 onPress={() => cancelOrder(order)}
@@ -505,22 +632,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="close-circle"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color={theme.colors.error}
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText, 
                     { 
                       color: theme.colors.error,
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Cancel
                 </Text>
@@ -531,9 +658,12 @@ const KDSDashboard = () => {
                   { 
                     backgroundColor: theme.colors.primary,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     shadowColor: theme.colors.primary,
                   }
                 ]} 
@@ -542,22 +672,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="play"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color={theme.colors.onPrimary}
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText,
                     { 
                       color: theme.colors.onPrimary,
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Start
                 </Text>
@@ -574,10 +704,13 @@ const KDSDashboard = () => {
                     backgroundColor: theme.colors.errorLight,
                     borderColor: theme.colors.error,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 2,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
+                    borderWidth: 1.5,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }
                 ]} 
                 onPress={() => cancelOrder(order)}
@@ -585,22 +718,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="close-circle"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color={theme.colors.error}
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText, 
                     { 
                       color: theme.colors.error,
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Cancel
                 </Text>
@@ -611,9 +744,12 @@ const KDSDashboard = () => {
                   { 
                     backgroundColor: theme.colors.success,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     shadowColor: theme.colors.success,
                   }
                 ]} 
@@ -622,22 +758,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="checkmark-circle"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color="#FFFFFF"
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText,
                     { 
                       color: '#FFFFFF',
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Mark Ready
                 </Text>
@@ -654,10 +790,13 @@ const KDSDashboard = () => {
                     backgroundColor: theme.colors.errorLight,
                     borderColor: theme.colors.error,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
-                    borderWidth: 2,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
+                    borderWidth: 1.5,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }
                 ]} 
                 onPress={() => cancelOrder(order)}
@@ -665,22 +804,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="close-circle"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color={theme.colors.error}
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText, 
                     { 
                       color: theme.colors.error,
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Cancel
                 </Text>
@@ -691,9 +830,12 @@ const KDSDashboard = () => {
                   { 
                     backgroundColor: theme.colors.success,
                     borderRadius: borderRadius.md,
-                    paddingVertical: spacing.md,
-                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.md + spacing.xs,
+                    paddingHorizontal: spacing.md,
                     flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     shadowColor: theme.colors.success,
                   }
                 ]} 
@@ -702,22 +844,22 @@ const KDSDashboard = () => {
                 <Icon
                   name="checkmark-done"
                   library="ionicons"
-                  size={16}
+                  size={18}
                   color="#FFFFFF"
-                  style={{ marginRight: spacing.xs }}
+                  responsive={true}
+                  hitArea={false}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text 
                   style={[
                     styles.actionText,
                     { 
                       color: '#FFFFFF',
-                      ...typography.bodyBold,
+                      ...typography.bodyMedium,
+                      fontWeight: '600',
                     }
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.7}
-                  allowFontScaling={true}
                 >
                   Complete
                 </Text>
@@ -827,7 +969,7 @@ const KDSDashboard = () => {
         { 
           backgroundColor: theme.colors.surface, 
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.lg, // Increased bottom padding for more spacing
         }
@@ -866,45 +1008,97 @@ const KDSDashboard = () => {
             onPress={onRefresh}
             style={[
               {
-                backgroundColor: theme.colors.primaryContainer,
-                borderColor: theme.colors.primary + '40',
-                borderRadius: borderRadius.round,
                 width: 44,
                 height: 44,
-                borderWidth: 1.5,
                 justifyContent: 'center',
                 alignItems: 'center',
+                backgroundColor: 'transparent',
               }
             ]}
           >
-            <Icon
-              name="refresh"
-              library="ionicons"
-              size={22}
-              color={theme.colors.primary}
-            />
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.primaryContainer,
+                  borderColor: theme.colors.primary + '40',
+                  borderRadius: borderRadius.round,
+                  width: 44,
+                  height: 44,
+                  borderWidth: 1.5,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.primary,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="refresh"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.primary}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </AnimatedButton>
           <AnimatedButton
             onPress={handleLogout}
             style={[
               {
-                backgroundColor: theme.colors.error + '20',
-                borderColor: theme.colors.error,
-                borderRadius: borderRadius.round,
                 width: 44,
                 height: 44,
-                borderWidth: 1.5,
                 justifyContent: 'center',
                 alignItems: 'center',
+                backgroundColor: 'transparent',
               }
             ]}
           >
-            <Icon
-              name="log-out-outline"
-              library="ionicons"
-              size={22}
-              color={theme.colors.error}
-            />
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.error + '20',
+                  borderColor: theme.colors.error,
+                  borderRadius: borderRadius.round,
+                  width: 44,
+                  height: 44,
+                  borderWidth: 1.5,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="log-out-outline"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </AnimatedButton>
           <ThemeToggle />
         </View>
@@ -1189,8 +1383,7 @@ const styles = StyleSheet.create({
     // Typography handled via theme
   },
   notesContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    // flexDirection and alignItems handled inline
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 8,

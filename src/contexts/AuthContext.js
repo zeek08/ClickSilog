@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
+    let loadingCompleted = false;
     
     const loadUser = async () => {
       try {
@@ -32,18 +33,26 @@ export const AuthProvider = ({ children }) => {
         console.error('Error loading user:', error);
       } finally {
         if (isMounted) {
+          loadingCompleted = true;
           setLoading(false);
+          // Clear timeout if it's still pending
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
         }
       }
     };
 
     // Set a timeout to ensure loading completes even if getCurrentUser hangs
     timeoutId = setTimeout(() => {
-      if (isMounted) {
+      if (isMounted && !loadingCompleted) {
+        // Only show warning if loading hasn't completed yet
         console.warn('AuthContext: Loading timeout, setting loading to false');
         setLoading(false);
+        loadingCompleted = true;
       }
-    }, 2000); // 2 second timeout - faster recovery
+    }, 3000); // 3 second timeout - increased to reduce false positives
 
     loadUser();
     

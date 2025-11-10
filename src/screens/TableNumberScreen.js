@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
@@ -9,7 +10,20 @@ import AnimatedButton from '../components/ui/AnimatedButton';
 import Icon from '../components/ui/Icon';
 import ThemeToggle from '../components/ui/ThemeToggle';
 
+// Helper function to convert hex color to rgba with opacity
+const hexToRgba = (hex, opacity) => {
+  // Remove # if present
+  const cleanHex = hex.replace('#', '');
+  // Parse RGB values
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  // Return rgba string
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
 const TableNumberScreen = () => {
+  const insets = useSafeAreaInsets();
   const [tableNumber, setTableNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const { theme, spacing, borderRadius, typography } = useTheme();
@@ -34,13 +48,8 @@ const TableNumberScreen = () => {
       const user = await authService.loginWithTableNumber(num);
       await login(user);
       
-             // Navigate to customer menu
-             try {
-               navigation.navigate('Main');
-             } catch (e) {
-               // If Main doesn't exist, the AppNavigator will handle routing
-               console.log('Navigation handled by AppNavigator');
-             }
+             // Navigation will be handled by AppNavigator based on user role
+             // No need to navigate manually - AppNavigator will route correctly
     } catch (error) {
       alertService.error('Invalid Table', error.message || 'Table number not found');
     } finally {
@@ -52,6 +61,7 @@ const TableNumberScreen = () => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.select({ ios: 80, android: 100 })}
     >
       {/* Header bar with Home and Theme buttons */}
       <View style={[
@@ -60,45 +70,59 @@ const TableNumberScreen = () => {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
           borderBottomWidth: 1.5,
-          paddingTop: spacing.xl + spacing.sm,
+              paddingTop: insets.top + spacing.lg,
           paddingBottom: spacing.md,
           paddingHorizontal: spacing.lg,
         }
       ]}>
-        <AnimatedButton
-          onPress={() => navigation.navigate('Home')}
-          style={[
-            styles.headerButton,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderColor: theme.colors.border,
-              borderRadius: borderRadius.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              borderWidth: 1.5,
-              flexDirection: 'row',
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AnimatedButton
+            onPress={() => navigation.navigate('Home')}
+            style={{
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
               alignItems: 'center',
-              gap: spacing.xs,
-            }
-          ]}
-        >
-          <Icon
-            name="home"
-            library="ionicons"
-            size={18}
-            color={theme.colors.text}
-          />
-          <Text style={[
-            styles.headerButtonText,
-            {
-              color: theme.colors.text,
-              ...typography.captionBold,
-            }
-          ]}>
-            Home
-          </Text>
-        </AnimatedButton>
-        <ThemeToggle />
+              backgroundColor: 'transparent',
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: hexToRgba(theme.colors.info || '#3B82F6', 0.1),
+                  borderWidth: 1.5,
+                  borderColor: (theme.colors.info || '#3B82F6') + '40',
+                  padding: spacing.sm,
+                  borderRadius: 999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.info || '#3B82F6',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="home"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.info || '#3B82F6'}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
+          </AnimatedButton>
+          <ThemeToggle />
+        </View>
       </View>
 
       <View style={[styles.content, { padding: spacing.xl }]}>
@@ -195,23 +219,12 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  headerButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  headerButtonText: {
-    fontWeight: '600',
   },
   content: {
     flex: 1,

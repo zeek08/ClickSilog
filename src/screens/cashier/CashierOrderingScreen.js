@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, Dimensions, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRealTimeCollection } from '../../hooks/useRealTime';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,6 +23,7 @@ const { width } = Dimensions.get('window');
 
 const CashierOrderingScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { logout } = React.useContext(AuthContext);
   const { items, total, clearCart, addToCart, calculateTotalPrice } = useCart();
@@ -148,7 +150,7 @@ const CashierOrderingScreen = () => {
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
         }
@@ -189,25 +191,49 @@ const CashierOrderingScreen = () => {
         <View style={[styles.headerActions, { marginTop: spacing.sm, gap: spacing.md }]}>
           {/* Logout Button */}
           <AnimatedButton
-            style={[
-              styles.headerButton,
-              {
-                backgroundColor: theme.colors.errorLight,
-                borderRadius: borderRadius.round,
-                width: 45,
-                height: 45,
-                borderWidth: 1.5,
-                borderColor: theme.colors.error + '40',
-              }
-            ]}
+            style={{
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+            }}
             onPress={handleLogout}
           >
-            <Icon
-              name="log-out-outline"
-              library="ionicons"
-              size={23}
-              color={theme.colors.error}
-            />
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.error + '20',
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.error,
+                  padding: spacing.sm,
+                  borderRadius: 999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="log-out-outline"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </AnimatedButton>
 
           {/* Theme Toggle */}
@@ -215,33 +241,50 @@ const CashierOrderingScreen = () => {
 
           {/* Cart Button */}
           <AnimatedButton
-            style={[
-              styles.cartButton,
-              {
-                backgroundColor: theme.colors.primary,
-                borderRadius: borderRadius.round,
-                width: 45,
-                height: 45,
-                shadowColor: theme.colors.primary,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-                elevation: 3,
-                position: 'relative',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: spacing.sm,
-              }
-            ]}
+            style={{
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              position: 'relative',
+            }}
             onPress={() => navigation.navigate('CashierPayment')}
           >
-            <Icon
-              name="cart"
-              library="ionicons"
-              size={23}
-              color={theme.colors.onPrimary}
-              style={{ margin: 0, padding: 0 }}
-            />
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.primary + '20',
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.primary,
+                  padding: spacing.sm,
+                  borderRadius: 999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.primary,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="cart"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.primary}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
             {cartCount > 0 && (
               <View style={[
                 styles.cartBadge, 
@@ -251,6 +294,9 @@ const CashierOrderingScreen = () => {
                   minWidth: 20,
                   height: 20,
                   paddingHorizontal: cartCount > 9 ? 4 : 6,
+                  position: 'absolute',
+                  top: -4,
+                  right: -4,
                 }
               ]}>
                 <Text style={[

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCart } from '../../contexts/CartContext';
 import { AuthContext } from '../../contexts/AuthContext';
 import { orderService } from '../../services/orderService';
 import Icon from '../../components/ui/Icon';
 import AnimatedButton from '../../components/ui/AnimatedButton';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 import NotificationModal from '../../components/ui/NotificationModal';
 
 const CashierPaymentScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { userRole } = React.useContext(AuthContext);
   const { items, total, clearCart, updateQty, removeFromCart } = useCart();
@@ -46,13 +49,17 @@ const CashierPaymentScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.select({ ios: 80, android: 100 })}
+    >
       <View style={[
         styles.header,
         {
           backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          paddingTop: spacing.xl + spacing.sm,
+          paddingTop: insets.top + spacing.lg,
           paddingHorizontal: spacing.md,
           paddingBottom: spacing.md,
           borderBottomWidth: 1,
@@ -61,26 +68,48 @@ const CashierPaymentScreen = ({ navigation }) => {
         <View style={styles.headerContent}>
           <AnimatedButton
             onPress={() => navigation.navigate('CashierOrdering')}
-            style={[
-              styles.backBtn,
-              {
-                backgroundColor: theme.colors.primaryContainer,
-                borderRadius: borderRadius.round,
+            style={{
+              width: 44,
+              height: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <View
+              style={{
                 width: 44,
                 height: 44,
-                borderWidth: 1.5,
-                borderColor: theme.colors.primary + '30',
-                justifyContent: 'center',
                 alignItems: 'center',
-              }
-            ]}
-          >
-            <Icon
-              name="arrow-back"
-              library="ionicons"
-              size={22}
-              color={theme.colors.primary}
-            />
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.error + '20',
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.error,
+                  padding: spacing.sm,
+                  borderRadius: 999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: theme.colors.error,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Icon
+                  name="arrow-back"
+                  library="ionicons"
+                  size={22}
+                  color={theme.colors.error}
+                  responsive={true}
+                  hitArea={false}
+                />
+              </View>
+            </View>
           </AnimatedButton>
           <Text style={[
             styles.headerTitle,
@@ -89,15 +118,16 @@ const CashierPaymentScreen = ({ navigation }) => {
               ...typography.h2,
               flex: 1,
               textAlign: 'center',
-              marginRight: 44,
             }
           ]}>
             Checkout
           </Text>
+          <ThemeToggle />
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
+        keyboardShouldPersistTaps="handled" 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -137,7 +167,7 @@ const CashierPaymentScreen = ({ navigation }) => {
             <TextInput
               value={tableOrName}
               onChangeText={setTableOrName}
-              placeholder="Table number or customer name (optional)"
+              placeholder="Table number or customer name"
               placeholderTextColor={theme.colors.textTertiary}
               style={[
                 styles.input,
@@ -149,6 +179,7 @@ const CashierPaymentScreen = ({ navigation }) => {
                   padding: spacing.md,
                   borderWidth: 1.5,
                   flex: 1,
+                  textAlign: 'center',
                   ...typography.body,
                 }
               ]}
@@ -190,19 +221,34 @@ const CashierPaymentScreen = ({ navigation }) => {
                   style={[
                     styles.removeBtn,
                     {
-                      backgroundColor: theme.colors.errorLight,
+                      backgroundColor: 'transparent',
                       borderRadius: borderRadius.round,
                       width: 36,
                       height: 36,
+                      justifyContent: 'center',
+                      alignItems: 'center',
                     }
                   ]}
                 >
-                  <Icon
-                    name="close"
-                    library="ionicons"
-                    size={20}
-                    color={theme.colors.error}
-                  />
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: theme.colors.errorLight,
+                      borderRadius: borderRadius.round,
+                    }}
+                  >
+                    <Icon
+                      name="close"
+                      library="ionicons"
+                      size={18}
+                      color={theme.colors.error}
+                      responsive={true}
+                      hitArea={false}
+                    />
+                  </View>
                 </AnimatedButton>
               </View>
               {!!item.addOns?.length && (
@@ -215,8 +261,8 @@ const CashierPaymentScreen = ({ navigation }) => {
                     marginTop: spacing.sm,
                   }
                 ]}>
-                  {item.addOns.map((a) => (
-                    <View key={a.id} style={[styles.addOnRow, { gap: spacing.xs }]}>
+                  {item.addOns.map((a, aIdx) => (
+                    <View key={`${item.id}-addon-${a.id || aIdx}`} style={[styles.addOnRow, { gap: spacing.xs }]}>
                       <Icon
                         name="add-circle"
                         library="ionicons"
@@ -495,7 +541,7 @@ const CashierPaymentScreen = ({ navigation }) => {
         iconColor={theme.colors.success}
         type="success"
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
